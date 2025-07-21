@@ -1,0 +1,114 @@
+"""Krungsri Bank text parser."""
+
+import re
+from collections.abc import Iterator
+from datetime import datetime
+from decimal import Decimal
+from pathlib import Path
+
+from ..interfaces.parser import Parser
+from ..models.transaction import Transaction
+
+
+class KrungsriTextParser(Parser):
+    """Parser for Krungsri Bank text statements."""
+
+    def can_parse(self, file_path: Path) -> bool:
+        """Check if this parser can handle the given file."""
+        try:
+            with open(file_path, encoding='utf-8') as f:
+                first_line = f.readline().strip()
+                # Check for Krungsri header pattern
+                return "Date/Time Transaction Withdrawal/Deposit Outstanding Balance Channel Description" in first_line
+        except (UnicodeDecodeError, FileNotFoundError):
+            return False
+
+    def parse_file(self, file_path: Path, account_config: dict) -> Iterator[Transaction]:
+        """Parse Krungsri text file and yield transactions."""
+        with open(file_path, encoding='utf-8') as f:
+            lines = f.readlines()
+
+        # Skip header line
+        for line in lines[1:]:
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                transaction = self._parse_line(line, account_config, str(file_path))
+                if transaction:
+                    yield transaction
+            except Exception as e:
+                # Log error but continue processing
+                print(f"Error parsing line: {line[:50]}... - {e}")
+                continue
+
+    def _parse_line(self, line: str, account_config: dict, source_file: str) -> Transaction:
+        """Parse a single transaction line."""
+        # Use regex to find amount and balance patterns (numbers with commas and decimals)
+        amount_pattern = r'([0-9,]+\.\d{2})'
+        matches = list(re.finditer(amount_pattern, line))
+
+        if len(matches) < 2:
+            raise ValueError(f"Could not find amount and balance in line: {line}")
+
+        # First match is amount, second is balance
+        amount_str = matches[0].group(1).replace(',', '')
+        balance_str = matches[1].group(1).replace(',', '')
+
+        amount = Decimal(amount_str)
+        balance = Decimal(balance_str)
+
+        # Parse date and time (first two parts)
+        parts = line.split()
+        if len(parts) < 2:
+            raise ValueError(f"Invalid line format: {line}")
+
+        date_str = f"{parts[0]} {parts[1]}"
+        date = datetime.strptime(date_str, "%d/%m/%Y %H:%M:%S")
+
+        # Find transaction type - it's everything between time and first amount
+        time_end = line.find(parts[1]) + len(parts[1])
+        amount_start = line.find(matches[0].group(1))
+        transaction_type = line[time_end:amount_start].strip()
+
+        # Parse channel and description
+        channel = None
+        description = ""
+
+        # Find channel after balance
+        balance_end = line.find(matches[1].group(1)) + len(matches[1].group(1))
+        remaining = line[balance_end:].strip()
+
+        if remaining:
+            remaining_parts = remaining.split()
+            if remaining_parts and remaining_parts[0].isupper() and len(remaining_parts[0]) <= 10:
+                channel = remaining_parts[0]
+                description = ' '.join(remaining_parts[1:]) if len(remaining_parts) > 1 else ""
+            else:
+                description = remaining
+
+        # Determine if it's a credit or debit
+        if "Deposit" in transaction_type or "Interest" in transaction_type:
+            # Keep amount positive for deposits
+            pass
+        else:
+            # Make amount negative for withdrawals/payments
+            amount = -abs(amount)
+
+        return Transaction(
+            date=date,
+            description=description,
+            amount=amount,
+            balance=balance,
+            transaction_type=transaction_type,
+            account_number=account_config.get("account_number", "XXX-1-32483-X"),
+            account_name=account_config.get("account_name", "MR. JOCHEM GRONDELLE"),
+            bank_name=account_config.get("bank_name", "Krungsri Bank"),
+            currency=account_config.get("currency", "THB"),
+            country_code=account_config.get("country_code", "TH"),
+            channel=channel,
+            source_file=source_file,
+            parser_name="krungsri_text",
+            raw_text=line,
+        )

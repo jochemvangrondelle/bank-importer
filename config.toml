@@ -1,0 +1,19 @@
+[[accounts]]
+name = "krungsri_main"
+parser = "krungsri_text"
+file_pattern = "*.txt"
+file_path = "src/bank_importer_th/data/raw"
+account_number = "XXX-1-32483-X"
+account_name = "MR. JOCHEM GRONDELLE"
+bank_name = "Krungsri Bank"
+branch_name = "EMQUARTIER BRANCH"
+currency = "THB"
+country_code = "TH"
+reference = "krungsri_main"
+
+[[targets]]
+name = "firefly"
+enabled = false
+
+[database]
+url = "sqlite:///bank_importer.db"
