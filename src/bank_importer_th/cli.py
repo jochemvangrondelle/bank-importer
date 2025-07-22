@@ -1,10 +1,41 @@
 """CLI interface for bank importer."""
 
 from pathlib import Path
+from typing import Any
 
 import click
 
+from .logging_config import (
+    log_error,
+    log_info,
+    log_success,
+    log_warning,
+    setup_logging,
+)
 from .processor import Processor
+
+
+def _log_session_details(session: dict[str, Any]) -> None:
+    """Log details for a single import session."""
+    status = session["status"]
+    session_name = session["session_name"]
+    account_name = session["account_name"]
+
+    if status == "completed":
+        log_success(f"{session_name} ({account_name}) - {status}")
+    elif status == "failed":
+        log_error(f"{session_name} ({account_name}) - {status}")
+    elif status == "processing":
+        log_info(f"{session_name} ({account_name}) - {status}")
+    else:
+        log_info(f"{session_name} ({account_name}) - {status}")
+
+    log_info(f"  File: {session['file_path']}")
+    log_info(f"  Transactions: {session['processed_transactions']}/{session['total_transactions']}")
+    if session["error_count"] > 0:
+        log_warning(f"  Errors: {session['error_count']}")
+    if session["started_at"]:
+        log_info(f"  Started: {session['started_at']}")
 
 
 @click.group()
@@ -21,8 +52,12 @@ def cli() -> None:
     help="Path to configuration file (default: config.toml)",
 )
 @click.option("--account", "-a", help="Process specific account only")
-def run(config: Path, account: str) -> None:
+@click.option("--log-level", default="INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)")
+def run(config: Path, account: str, log_level: str) -> None:
     """Run the bank importer pipeline."""
+    # Setup logging
+    setup_logging(log_level=log_level, enable_rich=True)
+
     try:
         processor = Processor(config)
 
@@ -30,38 +65,38 @@ def run(config: Path, account: str) -> None:
             # Process specific account
             account_config = processor.config_manager.get_account_config(account)
             if not account_config:
-                click.echo(f"Account '{account}' not found in configuration")
+                log_error(f"Account '{account}' not found in configuration")
                 return
 
-            click.echo(f"Processing account: {account}")
+            log_info(f"Processing account: {account}")
             transactions = list(processor.process_account(account))
         else:
             # Process all accounts
-            click.echo("Processing all accounts...")
+            log_info("Processing all accounts...")
             transactions = list(processor.process_accounts())
 
-        click.echo(f"Processed {len(transactions)} account results")
+        log_success(f"Processed {len(transactions)} account results")
 
         # Show summary
         if transactions:
             total_processed = sum(t.get("processed_transactions", 0) for t in transactions)
             total_errors = sum(t.get("error_count", 0) for t in transactions)
-            click.echo(f"Total transactions processed: {total_processed}")
+            log_info(f"Total transactions processed: {total_processed}")
             if total_errors > 0:
-                click.echo(f"Total errors: {total_errors}")
+                log_warning(f"Total errors: {total_errors}")
 
             # Show account results
-            click.echo("\nAccount results:")
+            log_info("Account results:")
             for result in transactions:
-                status = "✅" if result.get("error_count", 0) == 0 else "❌"
-                click.echo(
-                    f"  {status} {result['account_name']}: {result.get('processed_transactions', 0)} transactions"
-                )
-                if result.get("error_message"):
-                    click.echo(f"    Error: {result['error_message']}")
+                if result.get("error_count", 0) == 0:
+                    log_success(f"{result['account_name']}: {result.get('processed_transactions', 0)} transactions")
+                else:
+                    log_error(f"{result['account_name']}: {result.get('processed_transactions', 0)} transactions")
+                    if result.get("error_message"):
+                        log_error(f"  Error: {result['error_message']}")
 
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        log_error(f"Pipeline error: {e}")
         raise click.Abort() from e
 
 
@@ -69,14 +104,18 @@ def run(config: Path, account: str) -> None:
 @click.option(
     "--config", "-c", type=click.Path(path_type=Path), help="Path to configuration file (default: config.toml)"
 )
-def init(config: Path) -> None:
+@click.option("--log-level", default="INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)")
+def init(config: Path, log_level: str) -> None:
     """Initialize configuration file."""
+    # Setup logging
+    setup_logging(log_level=log_level, enable_rich=True)
+
     try:
         processor = Processor(config)
         processor.config_manager.save_config()
-        click.echo(f"Configuration saved to {processor.config_manager.config_path}")
+        log_success(f"Configuration saved to {processor.config_manager.config_path}")
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        log_error(f"Configuration error: {e}")
         raise click.Abort() from e
 
 
@@ -87,22 +126,26 @@ def init(config: Path) -> None:
     type=click.Path(exists=True, path_type=Path),
     help="Path to configuration file (default: config.toml)",
 )
-def list_accounts(config: Path) -> None:
+@click.option("--log-level", default="INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)")
+def list_accounts(config: Path, log_level: str) -> None:
     """List configured accounts."""
+    # Setup logging
+    setup_logging(log_level=log_level, enable_rich=True)
+
     try:
         processor = Processor(config)
         accounts = processor.config_manager.get_all_accounts()
 
         if not accounts:
-            click.echo("No accounts configured")
+            log_warning("No accounts configured")
             return
 
-        click.echo("Configured accounts:")
+        log_info("Configured accounts:")
         for account in accounts:
-            click.echo(f"  {account['name']}: {account['bank_name']} ({account['account_number']})")
+            log_info(f"  {account['name']}: {account['bank_name']} ({account['account_number']})")
 
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        log_error(f"Account listing error: {e}")
         raise click.Abort() from e
 
 
@@ -114,8 +157,12 @@ def list_accounts(config: Path) -> None:
     help="Path to configuration file (default: config.toml)",
 )
 @click.option("--account", "-a", help="Show sessions for specific account only")
-def list_sessions(config: Path, account: str) -> None:
+@click.option("--log-level", default="INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)")
+def list_sessions(config: Path, account: str, log_level: str) -> None:
     """List import sessions."""
+    # Setup logging
+    setup_logging(log_level=log_level, enable_rich=True)
+
     try:
         processor = Processor(config)
 
@@ -129,26 +176,15 @@ def list_sessions(config: Path, account: str) -> None:
                 sessions.extend(processor.db_manager.get_import_sessions_by_account(acc["name"]))
 
         if not sessions:
-            click.echo("No import sessions found")
+            log_warning("No import sessions found")
             return
 
-        click.echo("Import sessions:")
+        log_info("Import sessions:")
         for session in sessions:
-            status_icon = {"pending": "⏳", "processing": "🔄", "completed": "✅", "failed": "❌"}.get(
-                session["status"], "❓"
-            )
-
-            click.echo(f"  {status_icon} {session['session_name']} ({session['account_name']}) - {session['status']}")
-            click.echo(f"    File: {session['file_path']}")
-            click.echo(f"    Transactions: {session['processed_transactions']}/{session['total_transactions']}")
-            if session["error_count"] > 0:
-                click.echo(f"    Errors: {session['error_count']}")
-            if session["created_at"]:
-                click.echo(f"    Created: {session['created_at']}")
-            click.echo()
+            _log_session_details(session)
 
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        log_error(f"Session listing error: {e}")
         raise click.Abort() from e
 
 

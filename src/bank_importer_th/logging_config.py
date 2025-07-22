@@ -4,6 +4,7 @@ import logging
 import re
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 from rich.console import Console
 from rich.logging import RichHandler

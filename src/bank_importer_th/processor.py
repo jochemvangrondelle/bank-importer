@@ -5,7 +5,14 @@ from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 
-from .banks import KrungsriPdfParser, KrungsriTextParser
+from .banks import (
+    GenericCsvParser,
+    GenericFixedWidthParser,
+    GenericJsonParser,
+    KrungsriPdfParser,
+    KrungsriTextParser,
+    ScbPdfParser,
+)
 from .config import ConfigManager
 from .interfaces.parser import Parser
 from .models.database import DatabaseManager
@@ -24,6 +31,10 @@ class Processor:
         self.parsers = {
             "krungsri_text": KrungsriTextParser(),
             "krungsri_pdf": KrungsriPdfParser(),
+            "scb_pdf": ScbPdfParser(),
+            "generic_csv": GenericCsvParser(),
+            "generic_json": GenericJsonParser(),
+            "generic_fixed_width": GenericFixedWidthParser(),
         }
 
     def identify_pending_import_jobs(self) -> list[dict]:

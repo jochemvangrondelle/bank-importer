@@ -21,11 +21,25 @@ class KrungsriPdfParser(Parser):
         if file_path.suffix.lower() != ".pdf":
             return False
 
-        # Check if it's a Krungsri PDF by looking for characteristic content
+        # For can_parse, we'll just check if it's a PDF file
+        # The actual password validation will happen in parse_file
+        return True
+
+    def parse_file(self, file_path: Path, account_config: dict[str, Any]) -> Iterator[Transaction]:
+        """Parse Krungsri PDF statement and yield Transaction objects."""
+        # Get password from account configuration
+        password = account_config.get("password")
+
+        if not password:
+            raise ValueError(
+                f"Password is required for PDF file {file_path}. Please add 'password' field to account configuration."
+            )
+
         try:
-            with pdfplumber.open(file_path, password="11121983") as pdf:
+            with pdfplumber.open(file_path, password=password) as pdf:
+                # Verify it's a Krungsri PDF by checking content
                 if len(pdf.pages) == 0:
-                    return False
+                    raise ValueError(f"PDF file {file_path} has no pages")
 
                 # Extract text from first page to check for Krungsri indicators
                 first_page = pdf.pages[0]
@@ -39,14 +53,10 @@ class KrungsriPdfParser(Parser):
                     "XXX-1-32483-X",  # Account number pattern
                 ]
 
-                return any(indicator in text for indicator in krungsri_indicators)
-        except Exception:
-            return False
+                if not any(indicator in text for indicator in krungsri_indicators):
+                    raise ValueError(f"PDF file {file_path} does not appear to be a Krungsri bank statement")
 
-    def parse_file(self, file_path: Path, account_config: dict[str, Any]) -> Iterator[Transaction]:
-        """Parse Krungsri PDF statement and yield Transaction objects."""
-        try:
-            with pdfplumber.open(file_path, password="11121983") as pdf:
+                # Process all pages
                 for page in pdf.pages:
                     # Extract text from the page
                     text = page.extract_text()
@@ -57,7 +67,16 @@ class KrungsriPdfParser(Parser):
                     yield from self._parse_transactions_from_text(text, account_config, file_path)
 
         except Exception as e:
-            raise ValueError(f"Error parsing PDF file {file_path}") from e
+            if (
+                "password" in str(e).lower()
+                or "encrypted" in str(e).lower()
+                or "PDFPasswordIncorrect" in str(e)
+                or "PdfminerException" in str(e)
+            ):
+                raise ValueError(
+                    f"Incorrect password for PDF file {file_path}. Please check the password in account configuration."
+                )
+            raise ValueError(f"Error parsing PDF file {file_path}: {e}") from e
 
     def _parse_transactions_from_text(
         self, text: str, account_config: dict[str, Any], file_path: Path

@@ -1,18 +1,88 @@
 [[accounts]]
-name = "krungsri_main"
-parser = "krungsri_text"
-file_pattern = "*.txt"
-file_path = "src/bank_importer_th/data/raw"
+name           = "krungsri_main"
+parser         = "krungsri_text"
+file_pattern   = "*.txt"
+file_path      = "src/bank_importer_th/data/raw"
 account_number = "XXX-1-32483-X"
-account_name = "MR. JOCHEM GRONDELLE"
-bank_name = "Krungsri Bank"
-branch_name = "EMQUARTIER BRANCH"
-currency = "THB"
-country_code = "TH"
-reference = "krungsri_main"
+account_name   = "MR. JOCHEM GRONDELLE"
+bank_name      = "Krungsri Bank"
+branch_name    = "EMQUARTIER BRANCH"
+currency       = "THB"
+country_code   = "TH"
+reference      = "krungsri_main"
+
+[[accounts]]
+name           = "krungsri_pdf"
+parser         = "krungsri_pdf"
+file_pattern   = "*.pdf"
+file_path      = "src/bank_importer_th/data/raw"
+account_number = "XXX-1-32483-X"
+account_name   = "MR. JOCHEM GRONDELLE"
+bank_name      = "Krungsri Bank"
+branch_name    = "EMQUARTIER BRANCH"
+currency       = "THB"
+country_code   = "TH"
+reference      = "krungsri_pdf"
+password       = "11121983"
+
+[[accounts]]
+name           = "scb_main"
+parser         = "scb_pdf"
+file_pattern   = "AcctSt_*.pdf"
+file_path      = "src/bank_importer_th/data/raw"
+account_number = "042-289064-1"
+account_name   = "MISTER JOCHEM JASPER VAN GRONDELLE"
+bank_name      = "Siam Commercial Bank"
+branch_name    = ""
+currency       = "THB"
+country_code   = "TH"
+reference      = "scb_main"
+password       = "11121983"
+
+# Example configurations for generic parsers
+# Uncomment and modify as needed for your data files
+
+[[accounts]]
+name           = "generic_csv_example"
+parser         = "generic_csv"
+file_pattern   = "example_transactions.csv"
+file_path      = "src/bank_importer_th/data/raw"
+account_number = "123456789"
+account_name   = "Example Account"
+bank_name      = "Generic Bank"
+branch_name    = ""
+currency       = "THB"
+country_code   = "TH"
+reference      = "generic_csv_example"
+
+[[accounts]]
+name           = "generic_json_example"
+parser         = "generic_json"
+file_pattern   = "example_transactions.json"
+file_path      = "src/bank_importer_th/data/raw"
+account_number = "123456789"
+account_name   = "Example Account"
+bank_name      = "Generic Bank"
+branch_name    = ""
+currency       = "THB"
+country_code   = "TH"
+reference      = "generic_json_example"
+
+# [[accounts]]
+# name = "generic_fixed_width_example"
+# parser = "generic_fixed_width"
+# file_pattern = "*.txt"
+# file_path = "src/bank_importer_th/data/raw"
+# account_number = "123456789"
+# account_name = "Example Account"
+# bank_name = "Generic Bank"
+# branch_name = ""
+# currency = "THB"
+# country_code = "TH"
+# reference = "generic_fixed_width_example"
 
 [[targets]]
-name = "firefly"
+name    = "firefly"
 enabled = false
 
 [database]
