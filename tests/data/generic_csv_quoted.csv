@@ -1,0 +1,3 @@
+date,description,amount,currency,balance,transaction_type,channel,reference
+2024-01-01,"ATM Withdrawal, Central Branch",-1000.00,THB,10000.00,debit,ATM,TEST001
+2024-01-02,"Transfer Credit, From Account 123-456",2000.00,THB,12000.00,credit,IB,TEST002

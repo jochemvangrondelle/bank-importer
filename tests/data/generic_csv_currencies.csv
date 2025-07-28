@@ -1,0 +1,4 @@
+date,description,amount,currency,balance,transaction_type,channel,reference
+2024-01-01,USD Transaction,-100.00,USD,1000.00,debit,ATM,TEST001
+2024-01-02,EUR Transaction,200.00,EUR,1200.00,credit,IB,TEST002
+2024-01-03,THB Transaction,-500.00,THB,11500.00,debit,POS,TEST003

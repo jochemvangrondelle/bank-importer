@@ -4,9 +4,9 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from click.testing import CliRunner
+from typer.testing import CliRunner
 
-from bank_importer_th.cli import cli
+from bank_importer_th.cli_main import app
 
 
 class TestCLI:
@@ -25,7 +25,7 @@ class TestCLI:
             {
                 "name": "test_account",
                 "bank_name": "Test Bank",
-                "account_number": "123-456-789"
+                "account_number": "123-456-789",
             }
         ]
         return processor
@@ -33,9 +33,9 @@ class TestCLI:
     @pytest.mark.cli
     def test_cli_help(self, runner: CliRunner) -> None:
         """Test CLI help command."""
-        result = runner.invoke(cli, ["--help"])
+        result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        assert "Bank Importer Thailand" in result.output
+        assert "Bank Importer" in result.output
         assert "run" in result.output
         assert "list-accounts" in result.output
         assert "list-sessions" in result.output
@@ -48,7 +48,7 @@ class TestCLI:
             mock_processor_class.return_value = mock_processor
             mock_processor.process_accounts.return_value = []
 
-            result = runner.invoke(cli, ["run"])
+            result = runner.invoke(app, ["run"])
             assert result.exit_code == 0
             assert "Processing all accounts" in result.output
 
@@ -68,7 +68,7 @@ file_path = "test/path"
             mock_processor_class.return_value = mock_processor
             mock_processor.process_accounts.return_value = []
 
-            result = runner.invoke(cli, ["run", "--config", str(config_file)])
+            result = runner.invoke(app, ["run", "--config", str(config_file)])
             assert result.exit_code == 0
             mock_processor_class.assert_called_once_with(config_file)
 
@@ -80,11 +80,11 @@ file_path = "test/path"
             mock_processor_class.return_value = mock_processor
             mock_processor.config_manager.get_account_config.return_value = {
                 "name": "test_account",
-                "parser": "test_parser"
+                "parser": "test_parser",
             }
             mock_processor.process_account.return_value = []
 
-            result = runner.invoke(cli, ["run", "--account", "test_account"])
+            result = runner.invoke(app, ["run", "--account", "test_account"])
             assert result.exit_code == 0
             assert "Processing account: test_account" in result.output
 
@@ -96,7 +96,7 @@ file_path = "test/path"
             mock_processor_class.return_value = mock_processor
             mock_processor.config_manager.get_account_config.return_value = None
 
-            result = runner.invoke(cli, ["run", "--account", "nonexistent"])
+            result = runner.invoke(app, ["run", "--account", "nonexistent"])
             assert result.exit_code == 0
             assert "Account 'nonexistent' not found" in result.output
 
@@ -110,16 +110,16 @@ file_path = "test/path"
                 {
                     "name": "account1",
                     "bank_name": "Bank 1",
-                    "account_number": "123-456"
+                    "account_number": "123-456",
                 },
                 {
                     "name": "account2",
                     "bank_name": "Bank 2",
-                    "account_number": "789-012"
-                }
+                    "account_number": "789-012",
+                },
             ]
 
-            result = runner.invoke(cli, ["list-accounts"])
+            result = runner.invoke(app, ["list-accounts"])
             assert result.exit_code == 0
             assert "account1: Bank 1 (123-456)" in result.output
             assert "account2: Bank 2 (789-012)" in result.output
@@ -132,7 +132,7 @@ file_path = "test/path"
             mock_processor_class.return_value = mock_processor
             mock_processor.config_manager.get_all_accounts.return_value = []
 
-            result = runner.invoke(cli, ["list-accounts"])
+            result = runner.invoke(app, ["list-accounts"])
             assert result.exit_code == 0
             assert "No accounts configured" in result.output
 
@@ -154,11 +154,11 @@ file_path = "test/path"
                     "processed_transactions": 10,
                     "total_transactions": 10,
                     "error_count": 0,
-                    "created_at": "2024-01-01T00:00:00"
+                    "created_at": "2024-01-01T00:00:00",
                 }
             ]
 
-            result = runner.invoke(cli, ["list-sessions"])
+            result = runner.invoke(app, ["list-sessions"])
             assert result.exit_code == 0
             assert "✅ 2024-01 (test_account) - completed" in result.output
 
@@ -173,7 +173,7 @@ file_path = "test/path"
             ]
             mock_processor.db_manager.get_import_sessions_by_account.return_value = []
 
-            result = runner.invoke(cli, ["list-sessions"])
+            result = runner.invoke(app, ["list-sessions"])
             assert result.exit_code == 0
             assert "No import sessions found" in result.output
 
@@ -187,7 +187,7 @@ file_path = "test/path"
             mock_processor_class.return_value = mock_processor
             mock_processor.config_manager.config_path = config_file
 
-            result = runner.invoke(cli, ["init", "--config", str(config_file)])
+            result = runner.invoke(app, ["init", "--config", str(config_file)])
             assert result.exit_code == 0
             assert f"Configuration saved to {config_file}" in result.output
 
@@ -197,6 +197,6 @@ file_path = "test/path"
         with patch("bank_importer_th.cli.Processor") as mock_processor_class:
             mock_processor_class.side_effect = Exception("Test error")
 
-            result = runner.invoke(cli, ["run"])
+            result = runner.invoke(app, ["run"])
             assert result.exit_code == 1
             assert "Error: Test error" in result.output

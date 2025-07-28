@@ -1,0 +1,4 @@
+date,description,amount,currency,balance,transaction_type,channel,reference
+2024-01-01,Test Transaction,-1000.50,THB,10000.00,debit,ATM,TEST001
+2024-01-02,Another Transaction,2000,THB,12000.00,credit,IB,TEST002
+2024-01-03,Third Transaction,-500.75,THB,11500.00,debit,POS,TEST003
