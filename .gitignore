@@ -165,3 +165,4 @@ translation_cache.json
 # Temporary files
 *.tmp
 *.temp
+config.toml

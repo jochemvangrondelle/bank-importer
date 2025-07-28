@@ -1,0 +1,126 @@
+# Application settings
+[app]
+# Default timezone for all date/time operations
+timezone = "Asia/Bangkok"
+
+# Translation configuration
+[translation]
+# Global translation settings
+enable_translation      = true
+default_source_language = "TH"
+default_target_language = "en"
+translation_cache_file  = "translation_cache.json"
+# Google Translate API key (optional - if not provided, only term mapping will be used)
+google_translate_api_key = ""
+
+    # Language-specific term mappings
+    [translation.term_mappings]
+    # Thai to English financial terms
+    th_en = { "ATM" = "ATM", "IB" = "Internet Banking", "POS" = "Point of Sale", "CDM" = "Cash Deposit Machine", "INT" = "Interest", "FEE" = "Fee", "Transfer" = "Transfer", "Withdrawal" = "Withdrawal", "Deposit" = "Deposit", "Credit" = "Credit", "Debit" = "Debit", "Payment" = "Payment", "Interest" = "Interest", "Fee" = "Fee", "จ่ายบิล" = "Bill Payment", "ถอนเงิน" = "Withdrawal", "โอนเงิน" = "Transfer", "ฝากเงิน" = "Deposit" }
+
+    # Add more language pairs as needed
+    # de_en = { "ATM" = "ATM", "IB" = "Internet Banking" }
+
+[[accounts]]
+name           = "krungsri_pdf"
+parser         = "krungsri_pdf"
+file_pattern   = "*.pdf"
+file_path      = "data/in/Krungsri"
+account_number = "ACCOUNT_NUMBER"
+account_name   = "ACCOUNT_NAME"
+bank_name      = "BANK_NAME"
+branch_name    = "BRANCH_NAME"
+currency       = "THB"
+country_code   = "TH"
+reference      = "krungsri_pdf"
+password       = "01011980"
+
+    # Translation settings for this account
+    [accounts.translation]
+    enabled             = false
+    source_language     = "en"
+    target_language     = "en"
+    use_term_mapping    = false
+    use_api_translation = false
+    preserve_original   = false
+
+[[accounts]]
+name           = "scb_pdf"
+parser         = "scb_pdf"
+file_pattern   = "*AcctSt_*.pdf"
+file_path      = "data/in/SCB"
+account_number = "ACCOUNT_NUMBER"
+account_name   = "ACCOUNT_NAME"
+bank_name      = "BANK_NAME"
+branch_name    = ""
+currency       = "THB"
+country_code   = "TH"
+reference      = "scb_pdf"
+password       = "01011980"
+
+    # Translation settings for this account
+    [accounts.translation]
+    enabled             = true
+    source_language     = "TH"
+    target_language     = "en"
+    use_term_mapping    = true
+    use_api_translation = true
+    preserve_original   = true
+
+    # Example configurations for generic parsers
+    # Uncomment and modify as needed for your data files
+
+[[targets]]
+name    = "csv"
+enabled = true
+
+    [targets.csv_config]
+    # CSV export configuration
+    date_format     = "Y-m-d"
+    delimiter       = "comma"
+    include_headers = true
+
+    # Firefly-III import optimization
+    add_import_tag                = true
+    duplicate_detection           = "classic"
+    ignore_duplicate_lines        = true
+    ignore_duplicate_transactions = true
+
+    # Column mapping configuration
+    map_currency      = true
+    map_account_name  = true
+    map_account_iban  = true
+    map_opposing_name = true
+    map_opposing_iban = true
+    map_category      = true
+    map_budget        = true
+    map_bill          = true
+
+    # External ID for duplicate detection
+    use_external_id    = true
+    external_id_format = "{account_number}_{date}_{transaction_id}"
+
+    # Tags and metadata
+    default_tags             = ["imported", "bank-importer-th"]
+    include_parser_tag       = true
+    include_balance_info     = true
+    include_transaction_type = true
+
+[[targets]]
+name    = "yaml"
+enabled = true
+
+    [targets.yaml_config]
+    # YAML export configuration
+    include_summary = true
+    group_by_month  = true
+
+[[targets]]
+name    = "firefly"
+enabled = false
+
+[output]
+output_dir = "data/out"
+
+[database]
+url = "sqlite:///bank_importer.db"
