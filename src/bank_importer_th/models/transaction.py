@@ -1,5 +1,6 @@
 """Transaction model for bank statements."""
 
+import json
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -59,9 +60,9 @@ class Transaction(SQLModel, table=True):
     interest: Decimal | None = Field(default=None, sa_column=Column(Numeric(15, 2)))
     tax: Decimal | None = Field(default=None, sa_column=Column(Numeric(15, 2)))
 
-    # Raw data preservation
+    # Raw data preservation - store as JSON string
     raw_text: str | None = Field(default=None, sa_column=Column(Text))
-    raw_json: dict[str, Any] | None = Field(default=None, sa_column=Column(Text))
+    raw_json: str | None = Field(default=None, sa_column=Column(Text))
 
     # Processing metadata
     source_file: str | None = Field(default=None, max_length=500, index=True)
@@ -87,6 +88,22 @@ class Transaction(SQLModel, table=True):
         Index("idx_transaction_channel", "channel"),
         Index("idx_transaction_value_date", "value_date"),
     )
+
+    def get_raw_json_dict(self) -> dict[str, Any] | None:
+        """Get raw JSON data as dictionary."""
+        if self.raw_json is None:
+            return None
+        try:
+            return json.loads(self.raw_json)
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+    def set_raw_json_dict(self, value: dict[str, Any] | None) -> None:
+        """Set raw JSON data from dictionary."""
+        if value is None:
+            self.raw_json = None
+        else:
+            self.raw_json = json.dumps(value, ensure_ascii=False)
 
     @property
     def is_withdrawal(self) -> bool:
@@ -149,7 +166,7 @@ class Transaction(SQLModel, table=True):
             "interest": float(self.interest) if self.interest else None,
             "tax": float(self.tax) if self.tax else None,
             "raw_text": self.raw_text,
-            "raw_json": self.raw_json,
+            "raw_json": self.get_raw_json_dict(),
             "source_file": self.source_file,
             "parser_name": self.parser_name,
         }
@@ -183,7 +200,8 @@ class Transaction(SQLModel, table=True):
         if parsed_date is None:
             raise ValueError("Invalid date format")
 
-        return cls(
+        # Create transaction instance
+        transaction = cls(
             id=data.get("id"),
             date=parsed_date,
             description=data["description"],
@@ -220,7 +238,13 @@ class Transaction(SQLModel, table=True):
             interest=Decimal(str(data["interest"])) if data.get("interest") else None,
             tax=Decimal(str(data["tax"])) if data.get("tax") else None,
             raw_text=data.get("raw_text"),
-            raw_json=data.get("raw_json"),
+            raw_json=None,  # Will be set below
             source_file=data.get("source_file"),
             parser_name=data.get("parser_name"),
         )
+
+        # Set raw JSON data if provided
+        if data.get("raw_json"):
+            transaction.set_raw_json_dict(data["raw_json"])
+
+        return transaction

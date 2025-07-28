@@ -1,10 +1,12 @@
 """Common CLI parameters and utilities for reducing code duplication."""
 
-
 import typer
+from typing import List, Optional
 
 from .models.database import DatabaseManager
 from .processor import Processor
+from .config import ConfigManager
+from .logging_config import get_console
 
 # Common CLI parameter definitions for reuse
 CONFIG_FILE_PARAM = typer.Option(
@@ -25,8 +27,71 @@ OUTPUT_PARAM = typer.Option(
     "-", "--output", "-o", help="Output file (use - for stdout)"
 )
 
+
+def get_available_accounts() -> List[str]:
+    """Get list of available account names from config."""
+    try:
+        config_manager = ConfigManager()
+        accounts = config_manager.get_all_accounts()
+        return [account.get("name", "") for account in accounts if account.get("name")]
+    except Exception:
+        # Return empty list if config can't be loaded
+        return []
+
+
+def _validate_account(
+    ctx: typer.Context, param: typer.CallbackParam, value: Optional[str]
+) -> Optional[str]:
+    """Validate account parameter and provide suggestions if invalid."""
+    if value is None:
+        return value
+
+    # Skip validation for help flags and other special values
+    if value.startswith("--"):
+        return value
+
+    available_accounts = get_available_accounts()
+
+    if value not in available_accounts:
+        # Get the console for rich output
+        console = get_console()
+
+        console.print(f"\n❌ Invalid account: '{value}'", style="red")
+        console.print("\n📋 Available accounts:", style="yellow")
+
+        if available_accounts:
+            for account in available_accounts:
+                console.print(f"  • {account}", style="cyan")
+        else:
+            console.print("  No accounts configured in config.toml", style="dim")
+
+        console.print(
+            f"\n💡 Usage: {ctx.command_path} --account <account_name>", style="blue"
+        )
+        console.print(
+            "💡 Run 'bank-importer-th list-accounts' to see all accounts", style="blue"
+        )
+
+        raise typer.BadParameter(f"Invalid account: '{value}'")
+
+    return value
+
+
+def _autocomplete_accounts(
+    ctx: typer.Context, args: List[str], incomplete: str
+) -> List[str]:
+    """Autocomplete function for account names."""
+    available_accounts = get_available_accounts()
+    return [account for account in available_accounts if account.startswith(incomplete)]
+
+
 ACCOUNT_PARAM = typer.Option(
-    None, "--account", "-a", help="Process specific account only"
+    None,
+    "--account",
+    "-a",
+    help="Process specific account only",
+    callback=_validate_account,
+    autocompletion=_autocomplete_accounts,
 )
 
 TARGET_PARAM = typer.Option(None, "--target", "-t", help="Target name for export")

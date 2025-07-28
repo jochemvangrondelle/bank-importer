@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .banks import (
+    AmexThCsvParser,
     GenericCsvParser,
     GenericFixedWidthParser,
     GenericJsonParser,
@@ -18,6 +19,7 @@ from .interfaces.parser import Parser
 from .models.database import DatabaseManager
 from .models.import_session import ImportSession
 from .models.transaction import Transaction
+from .parser_detector import ParserDetector
 from .target_manager import TargetManager
 
 
@@ -30,14 +32,7 @@ class Processor:
         self.db_manager = DatabaseManager(self.config_manager.get_database_url())
         self.target_manager = TargetManager(self.config_manager, self.db_manager)
         self.logger = logging.getLogger(__name__)
-        self.parsers = {
-            "krungsri_text": KrungsriTextParser(),
-            "krungsri_pdf": KrungsriPdfParser(),
-            "scb_pdf": ScbPdfParser(),
-            "generic_csv": GenericCsvParser(),
-            "generic_json": GenericJsonParser(),
-            "generic_fixed_width": GenericFixedWidthParser(),
-        }
+        self.parser_detector = ParserDetector()
         # Initialize translation service once
         self.translation_service = None
         self._init_translation_service()
@@ -48,10 +43,12 @@ class Processor:
 
     def get_parser(self, parser_name: str) -> Parser | None:
         """Get parser by name."""
-        return self.parsers.get(parser_name)
+        return self.parser_detector.get_parser(parser_name)
 
-    def _get_parser(self, parser_name: str) -> Parser:
+    def _get_parser(self, parser_name: str | None) -> Parser:
         """Get parser by name, raising error if not found."""
+        if not parser_name:
+            raise ValueError("Parser name is required")
         parser = self.get_parser(parser_name)
         if not parser:
             raise ValueError(f"Unknown parser type: {parser_name}")
@@ -74,18 +71,17 @@ class Processor:
         file_path = Path(account_config.get("file_path", "data/in"))
         file_pattern = account_config.get("file_pattern", "*")
 
-        # Get parser
+        # Get parser - use parser detection if no parser specified
         if not parser_name:
-            self.logger.error(f"No parser specified for account '{account_name}'")
-            yield {
-                "account_name": account_name,
-                "error_count": 1,
-                "error_message": "No parser specified",
-            }
-            return
+            self.logger.warning(
+                f"No parser specified for account '{account_name}', will use auto-detection"
+            )
 
         try:
-            parser = self._get_parser(parser_name)
+            if parser_name:
+                parser = self._get_parser(parser_name)
+            else:
+                parser = None  # Will be detected per file
         except ValueError as e:
             self.logger.exception("Parser error for account '%s'", account_name)
             yield {
@@ -114,26 +110,61 @@ class Processor:
         total_skipped = 0
 
         for file_path in files:
-            if not parser.can_parse(file_path):
+            # Detect parser for this file if not specified
+            detected_parser_name = parser_name
+            if not parser_name:
+                # Get parent folder hint for better detection
+                parent_folder = file_path.parent.name
+                detected_parser_name = self.parser_detector.detect_parser(
+                    file_path, parent_folder
+                )
+
+                if not detected_parser_name:
+                    self.logger.error(f"Could not detect parser for file: {file_path}")
+                    total_errors += 1
+                    continue
+
+                self.logger.info(
+                    f"Detected parser '{detected_parser_name}' for file: {file_path}"
+                )
+
+            # Get the parser instance
+            try:
+                file_parser = self._get_parser(detected_parser_name)
+            except ValueError as e:
+                self.logger.error(f"Parser '{detected_parser_name}' not found: {e}")
+                total_errors += 1
+                continue
+
+            # Validate parser can handle this file
+            if not file_parser.can_parse(file_path):
                 self.logger.warning(
-                    f"Parser '{parser_name}' cannot parse file: {file_path}"
+                    f"Parser '{detected_parser_name}' cannot parse file: {file_path}"
                 )
                 total_errors += 1
                 continue
 
-            # Check if file has been exported (unless reprocessing is requested)
+            # Check if file has been imported or exported (unless reprocessing is requested)
             if not reprocess_existing:
-                if self.db_manager.has_source_file_been_exported(str(file_path)):
+                if self.db_manager.has_source_file_been_imported(str(file_path)):
+                    self.logger.info(
+                        f"Skipping {file_path} - already imported (use --reprocess-existing to override)"
+                    )
+                    total_skipped += 1
+                    continue
+                elif self.db_manager.has_source_file_been_exported(str(file_path)):
                     self.logger.info(
                         f"Skipping {file_path} - already exported (use --reprocess-existing to override)"
                     )
                     total_skipped += 1
                     continue
 
-            self.logger.info(f"Processing {file_path} for account '{account_name}'")
+            self.logger.info(
+                f"Processing {file_path} for account '{account_name}' with parser '{detected_parser_name}'"
+            )
             try:
                 transactions = list(
-                    self._process_file(file_path, account_config, parser_name)
+                    self._process_file(file_path, account_config, detected_parser_name)
                 )
                 total_processed += len(transactions)
             except Exception:

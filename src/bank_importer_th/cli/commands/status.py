@@ -125,6 +125,8 @@ def status(
                 "Max Date", no_wrap=True
             )  # Will be styled dynamically
             sessions_table.add_column("Last Month", style="cyan", no_wrap=True)
+            sessions_table.add_column("EXPENSE", style="red", no_wrap=True, width=12)
+            sessions_table.add_column("DEPOSIT", style="green", no_wrap=True, width=12)
 
             # Add rows (show all sessions, not just last 10)
             # Sort by Min Date with fallback to filename
@@ -185,7 +187,19 @@ def status(
                 last_month_date = "N/A"
                 max_date_style = "purple"  # Default style
 
+                # Calculate expense and deposit amounts
+                expense_amount = 0.0
+                deposit_amount = 0.0
+
                 if transactions_in_session:
+                    for transaction in transactions_in_session:
+                        amount = transaction.get("amount", 0)
+                        if isinstance(amount, (int, float)):
+                            if amount < 0:
+                                expense_amount += abs(amount)
+                            elif amount > 0:
+                                deposit_amount += amount
+
                     dates = [
                         t.get("date", "")
                         for t in transactions_in_session
@@ -233,6 +247,8 @@ def status(
                     min_date,
                     f"[red]{max_date}[/red]" if max_date_style == "red" else max_date,
                     last_month_date,
+                    f"{expense_amount:,.2f}",
+                    f"{deposit_amount:,.2f}",
                 )
 
             # Add consolidated summary row (same as 'all' export)
@@ -249,6 +265,18 @@ def status(
                 consolidated_max_date = "N/A"
                 consolidated_last_month_date = "N/A"
                 consolidated_max_date_style = "purple"
+
+                # Calculate consolidated expense and deposit amounts
+                consolidated_expense_amount = 0.0
+                consolidated_deposit_amount = 0.0
+
+                for transaction in all_transactions:
+                    amount = transaction.get("amount", 0)
+                    if isinstance(amount, (int, float)):
+                        if amount < 0:
+                            consolidated_expense_amount += abs(amount)
+                        elif amount > 0:
+                            consolidated_deposit_amount += amount
 
                 dates = [t.get("date", "") for t in all_transactions if t.get("date")]
                 if dates:
@@ -295,6 +323,8 @@ def status(
                     if consolidated_max_date_style == "red"
                     else consolidated_max_date,
                     consolidated_last_month_date,
+                    f"{consolidated_expense_amount:,.2f}",
+                    f"{consolidated_deposit_amount:,.2f}",
                     style="bold cyan",
                 )
 

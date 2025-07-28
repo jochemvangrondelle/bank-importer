@@ -8,6 +8,7 @@ from .cli.commands import (
     export_multi,
     import_files,
     init,
+    list_parsers,
     run,
     status,
     translate,
@@ -31,6 +32,7 @@ app.command()(coverage.coverage)
 app.command()(run.run)
 app.command()(clean.clean)
 app.command()(version.version)
+app.command()(list_parsers.list_parsers)
 
 
 def main() -> None:

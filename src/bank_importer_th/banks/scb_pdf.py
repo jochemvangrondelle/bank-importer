@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import pdfplumber
 import pytz
@@ -16,6 +16,60 @@ from ..models.transaction import Transaction
 
 class ScbPdfParser(Parser):
     """Parser for SCB PDF bank statements."""
+
+    def get_bank_type(self) -> str:
+        """Get the bank type identifier for this parser."""
+        return "scb"
+
+    def get_export_config(self) -> Dict[str, Any]:
+        """Get export configuration specific to this parser."""
+        return {
+            "bank_name": "Siam Commercial Bank",
+            "default_account_name": "SCB Savings Account",
+            "default_account_number": "042-2-89064-1",
+            "default_currency": "THB",
+            "default_country_code": "TH",
+            "supports_foreign_currency": False,
+            "supports_translation": True,
+            "translation_source_language": "TH",
+            "translation_target_language": "en",
+        }
+
+    def get_parser_name(self) -> str:
+        """Get the parser name identifier."""
+        return "scb_pdf"
+
+    def get_default_account_name(self) -> str:
+        """Get the default account name for this parser."""
+        return "SCB Savings Account"
+
+    def get_default_account_number(self) -> str:
+        """Get the default account number for this parser."""
+        return "042-2-89064-1"
+
+    def get_default_currency(self) -> str:
+        """Get the default currency for this parser."""
+        return "THB"
+
+    def get_default_country_code(self) -> str:
+        """Get the default country code for this parser."""
+        return "TH"
+
+    def get_supported_file_patterns(self) -> list[str]:
+        """Get list of supported file patterns for this parser."""
+        return ["*AcctSt_*.pdf"]
+
+    def get_supported_extensions(self) -> list[str]:
+        """Get list of supported file extensions for this parser."""
+        return [".pdf"]
+
+    def get_parser_description(self) -> str:
+        """Get a human-readable description of this parser."""
+        return "Siam Commercial Bank PDF Statement Parser"
+
+    def get_parser_version(self) -> str:
+        """Get the parser version."""
+        return "1.0.0"
 
     def can_parse(self, file_path: Path) -> bool:
         """Check if this parser can handle the given file."""
@@ -93,9 +147,7 @@ class ScbPdfParser(Parser):
         lines = text.split("\n")
 
         # Find the transaction section
-        transaction_lines = []
         in_transaction_section = False
-        current_transaction = {}
 
         for i, line in enumerate(lines):
             line = line.strip()
@@ -123,6 +175,7 @@ class ScbPdfParser(Parser):
                 or line.startswith("Total items")
                 or line.startswith("ยอดเงินคงเหลือยกมา")
                 or line.startswith("Balance brought forward")
+                or line.startswith("NOTE :")
             ):
                 continue
 
@@ -173,8 +226,7 @@ class ScbPdfParser(Parser):
                                         "date": date,
                                         "description": description,
                                         "time": time,
-                                        "debit": details.get("debit"),
-                                        "credit": details.get("credit"),
+                                        "raw_amount": details.get("raw_amount"),
                                         "balance": details.get("balance"),
                                         "channel": details.get("channel"),
                                     },
@@ -183,19 +235,6 @@ class ScbPdfParser(Parser):
                                 )
                                 if transaction:
                                     yield transaction
-
-        # Parse each transaction line
-        for line in transaction_lines:
-            try:
-                transaction = self._parse_transaction_line(
-                    line, account_config, file_path
-                )
-                if transaction:
-                    yield transaction
-            except Exception as e:
-                # Log parsing errors but continue with other transactions
-                print(f"Error parsing transaction line '{line}': {e}")
-                continue
 
     def _parse_transaction_details(self, line: str) -> dict[str, Any] | None:
         """Parse transaction details line."""
@@ -276,16 +315,12 @@ class ScbPdfParser(Parser):
             return None
         balance = Decimal(clean_balance)
 
-        # In SCB format, the amount shown is typically the debit amount (withdrawal)
-        # We'll determine if it's a debit or credit based on the transaction type
-        # For now, assume it's a debit (withdrawal) - the _create_transaction method will handle this
-        debit = amount
-        credit = None
-
+        # In SCB format, we need to determine if this is a debit or credit
+        # We'll store the raw amount and let _create_transaction determine the classification
+        # based on the transaction description and channel
         return {
             "channel": channel,
-            "debit": debit,
-            "credit": credit,
+            "raw_amount": amount,
             "balance": balance,
         }
 
@@ -297,52 +332,99 @@ class ScbPdfParser(Parser):
     ) -> Transaction | None:
         """Create a Transaction object from parsed data."""
         try:
-            # Get the amount from the transaction details
-            amount = transaction_data.get("debit") or transaction_data.get("credit")
-            if amount is None:
+            # Get the raw amount and balance from the transaction details
+            raw_amount = transaction_data.get("raw_amount")
+            balance = transaction_data.get("balance")
+            description = transaction_data.get("description", "")
+            channel = transaction_data.get("channel", "")
+
+            if balance is None or raw_amount is None:
                 return None
 
-            # Determine transaction type based on the amount and description
-            # In SCB format, positive amounts are usually debits (withdrawals)
-            # We need to determine if this is a withdrawal or deposit
-            description = transaction_data.get("description", "").lower()
+            # Determine if this is income or expense based on description and channel
+            # Income indicators: "Received transfer", "From the deposit system", "Credit", etc.
+            # Expense indicators: "Withdrawal", "Payment", "Debit", etc.
 
-            # Look for keywords that indicate withdrawal vs deposit
-            withdrawal_keywords = [
+            # Check for income indicators in description
+            income_keywords = [
+                "received transfer",
+                "รับโอนจาก",
+                "from the deposit system",
+                "จากระบบเงินฝาก",
+                "credit",
+                "deposit",
+                "transfer in",
+                "mcl",  # MCL transactions are typically deposits
+            ]
+
+            # Check for expense indicators in description
+            expense_keywords = [
                 "withdrawal",
                 "payment",
+                "debit",
                 "purchase",
                 "transfer out",
-                "debit",
+                "withdraw",
+                "pay",
+                "spend",
+                "จ่ายบิล",  # Bill payment in Thai
+                "top-up",
+                "terminal",
+                "atm",
+                "cdm",
+                "transfer to",  # Transfer to other accounts
+                "promptpay",  # PromptPay transfers
+                "income from work",  # Income from work transfers
             ]
-            deposit_keywords = [
-                "deposit",
-                "credit",
-                "transfer in",
-                "refund",
-                "interest",
-            ]
 
-            is_withdrawal = any(
-                keyword in description for keyword in withdrawal_keywords
-            )
-            is_deposit = any(keyword in description for keyword in deposit_keywords)
+            # Check channel codes for income/expense classification
+            income_channels = ["X1", "X2", "IN"]  # Transfer in, deposit
+            expense_channels = [
+                "FE",
+                "WD",
+                "PAY",
+                "ATM",
+                "CDM",
+            ]  # Fee, withdrawal, payment
 
-            # If we can't determine from description, assume it's a withdrawal (positive amount)
-            if not is_withdrawal and not is_deposit:
-                is_withdrawal = True  # Default assumption
+            is_income = False
+            is_expense = False
 
-            if is_withdrawal:
-                amount = -abs(amount)  # Make it negative for withdrawal
+            # Check description keywords
+            description_lower = description.lower()
+            for keyword in income_keywords:
+                if keyword in description_lower:
+                    is_income = True
+                    break
+
+            for keyword in expense_keywords:
+                if keyword in description_lower:
+                    is_expense = True
+                    break
+
+            # Check channel codes
+            if not is_income and not is_expense:
+                for channel_code in income_channels:
+                    if channel.startswith(channel_code):
+                        is_income = True
+                        break
+
+                for channel_code in expense_channels:
+                    if channel.startswith(channel_code):
+                        is_expense = True
+                        break
+
+            # Determine amount and transaction type
+            if is_income:
+                amount = raw_amount  # Income is positive
+                transaction_type = "deposit"
+            elif is_expense:
+                amount = -raw_amount  # Expense is negative
                 transaction_type = "withdrawal"
             else:
-                amount = abs(amount)  # Keep it positive for deposit
-                transaction_type = "deposit"
-
-            # Balance is required
-            balance = transaction_data.get("balance")
-            if balance is None:
-                return None
+                # Default to expense if we can't determine
+                amount = -raw_amount
+                transaction_type = "withdrawal"
 
             # Create transaction
             return Transaction(
@@ -356,7 +438,7 @@ class ScbPdfParser(Parser):
                 account_name=account_config.get("account_name", ""),
                 bank_name=account_config.get("bank_name", "SCB"),
                 branch_name=account_config.get("branch_name", ""),
-                channel=transaction_data.get("channel"),
+                channel=channel,
                 reference=account_config.get("reference", ""),
                 source_file=str(file_path),
                 country_code=account_config.get("country_code", "TH"),

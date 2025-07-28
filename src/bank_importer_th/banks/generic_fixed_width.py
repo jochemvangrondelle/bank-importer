@@ -6,20 +6,76 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 from ..interfaces.parser import Parser
 from ..models.transaction import Transaction
 
 
 class GenericFixedWidthParser(Parser):
-    """Generic parser for fixed-width text files containing transaction data."""
+    """Generic parser for fixed-width text files."""
+
+    def get_bank_type(self) -> str:
+        """Get the bank type identifier for this parser."""
+        return "generic"
+
+    def get_export_config(self) -> Dict[str, Any]:
+        """Get export configuration specific to this parser."""
+        return {
+            "bank_name": "Generic Bank",
+            "default_account_name": "Generic Account",
+            "default_account_number": "0000000000",
+            "default_currency": "THB",
+            "default_country_code": "TH",
+            "supports_foreign_currency": False,
+            "supports_translation": False,
+            "translation_source_language": "en",
+            "translation_target_language": "en",
+        }
+
+    def get_parser_name(self) -> str:
+        """Get the parser name identifier."""
+        return "generic_fixed_width"
+
+    def get_default_account_name(self) -> str:
+        """Get the default account name for this parser."""
+        return "Generic Account"
+
+    def get_default_account_number(self) -> str:
+        """Get the default account number for this parser."""
+        return "0000000000"
+
+    def get_default_currency(self) -> str:
+        """Get the default currency for this parser."""
+        return "THB"
+
+    def get_default_country_code(self) -> str:
+        """Get the default country code for this parser."""
+        return "TH"
+
+    def get_supported_file_patterns(self) -> list[str]:
+        """Get list of supported file patterns for this parser."""
+        return ["*.txt", "*.dat", "*.prn"]
+
+    def get_supported_extensions(self) -> list[str]:
+        """Get list of supported file extensions for this parser."""
+        return [".txt", ".dat", ".prn"]
+
+    def get_parser_description(self) -> str:
+        """Get a human-readable description of this parser."""
+        return "Generic fixed-width text parser for legacy bank formats"
+
+    def get_parser_version(self) -> str:
+        """Get the parser version."""
+        return "1.0.0"
 
     def can_parse(self, file_path: Path) -> bool:
         """Check if this parser can handle the given file."""
         return file_path.suffix.lower() in [".txt", ".dat", ".prn"]
 
-    def parse_file(self, file_path: Path, account_config: dict[str, Any]) -> Iterator[Transaction]:
+    def parse_file(
+        self, file_path: Path, account_config: dict[str, Any]
+    ) -> Iterator[Transaction]:
         """Parse fixed-width text file and yield Transaction objects."""
         try:
             with open(file_path, encoding="utf-8") as file:
@@ -43,7 +99,9 @@ class GenericFixedWidthParser(Parser):
                         continue
 
                     try:
-                        transaction = self._parse_line(line, field_positions, account_config, file_path, line_num)
+                        transaction = self._parse_line(
+                            line, field_positions, account_config, file_path, line_num
+                        )
                         if transaction:
                             yield transaction
                     except Exception as e:
@@ -53,7 +111,9 @@ class GenericFixedWidthParser(Parser):
         except Exception as e:
             raise ValueError("Error parsing fixed-width file") from e
 
-    def _detect_field_positions(self, lines: list[str]) -> dict[str, tuple[int, int]] | None:
+    def _detect_field_positions(
+        self, lines: list[str]
+    ) -> dict[str, tuple[int, int]] | None:
         """Auto-detect field positions from the file content."""
         if not lines:
             return None
@@ -109,7 +169,9 @@ class GenericFixedWidthParser(Parser):
 
         return None
 
-    def _infer_field_positions(self, lines: list[str]) -> dict[str, tuple[int, int]] | None:
+    def _infer_field_positions(
+        self, lines: list[str]
+    ) -> dict[str, tuple[int, int]] | None:
         """Infer field positions from data patterns."""
         if not lines:
             return None
@@ -217,7 +279,9 @@ class GenericFixedWidthParser(Parser):
             print(f"Error parsing line {line_num}: {e}")
             return None
 
-    def _extract_description(self, line: str, field_positions: dict[str, tuple[int, int]]) -> str:
+    def _extract_description(
+        self, line: str, field_positions: dict[str, tuple[int, int]]
+    ) -> str:
         """Extract description from the line, excluding known fields."""
         # Find the largest gap between known fields
         known_positions = sorted(field_positions.values())

@@ -149,6 +149,13 @@ class CsvTarget(Target):
             # Raw data preservation
             "raw_text",
             "raw_json",
+            # Amex-specific fields
+            "card_member",
+            "appears_on_statement",
+            "address",
+            "city_state",
+            "zip_code",
+            "extended_details",
         ]
 
         exported_count = 0
@@ -294,7 +301,7 @@ class CsvTarget(Target):
         tax_str = f"{transaction.tax:.2f}" if transaction.tax else ""
 
         # Create comprehensive notes with all available metadata
-        notes_parts = []
+        notes_parts: list[str] = []
         if transaction.balance:
             notes_parts.append(f"Balance: {transaction.balance:.2f}")
         if transaction.transaction_type:
@@ -317,7 +324,7 @@ class CsvTarget(Target):
         notes = " | ".join(notes_parts) if notes_parts else ""
 
         # Create enhanced tags
-        tags_parts = ["imported", transaction.parser_name or "unknown"]
+        tags_parts: list[str] = ["imported", transaction.parser_name or "unknown"]
         if transaction.transaction_type:
             tags_parts.append(transaction.transaction_type.lower())
         if transaction.channel:
@@ -325,6 +332,41 @@ class CsvTarget(Target):
         if transaction.category:
             tags_parts.append(transaction.category.lower())
         tags = ",".join(tags_parts)
+
+        # Extract Amex-specific fields from raw_json if available
+        amex_fields: dict[str, str] = {}
+        if transaction.raw_json and isinstance(transaction.raw_json, dict):
+            import typing
+
+            raw_json_dict = typing.cast(dict[str, Any], transaction.raw_json)
+            amex_fields = {
+                "card_member": str(raw_json_dict.get("card_member", "")),
+                "appears_on_statement": str(
+                    raw_json_dict.get("appears_on_statement", "")
+                ),
+                "address": str(raw_json_dict.get("address", "")),
+                "city_state": str(raw_json_dict.get("city_state", "")),
+                "zip_code": str(raw_json_dict.get("zip_code", "")),
+                "extended_details": str(raw_json_dict.get("extended_details", "")),
+            }
+        else:
+            amex_fields = {
+                "card_member": "",
+                "appears_on_statement": "",
+                "address": "",
+                "city_state": "",
+                "zip_code": "",
+                "extended_details": "",
+            }
+
+        # External ID logic
+        external_id = ""
+        if transaction.reference and self._looks_like_transaction_id(
+            transaction.reference
+        ):
+            external_id = transaction.reference
+        # Always use our unique_id as internal_reference
+        internal_reference = transaction.unique_id or ""
 
         return {
             # Core transaction data
@@ -379,8 +421,8 @@ class CsvTarget(Target):
             # Additional metadata
             "tags": tags,
             "notes": notes,
-            "external_id": "",  # Keep empty unless we have a unique ID from import
-            "internal_reference": transaction.unique_id or transaction.reference or "",
+            "external_id": external_id,
+            "internal_reference": internal_reference,
             # Bank-specific information
             "bank_name": bank_name,
             "branch_name": branch_name,
@@ -390,6 +432,13 @@ class CsvTarget(Target):
             # Raw data preservation
             "raw_text": transaction.raw_text or "",
             "raw_json": str(transaction.raw_json) if transaction.raw_json else "",
+            # Amex-specific fields
+            "card_member": amex_fields["card_member"],
+            "appears_on_statement": amex_fields["appears_on_statement"],
+            "address": amex_fields["address"],
+            "city_state": amex_fields["city_state"],
+            "zip_code": amex_fields["zip_code"],
+            "extended_details": amex_fields["extended_details"],
         }
 
     def _generate_import_config(
@@ -414,7 +463,7 @@ class CsvTarget(Target):
                 # Core transaction data (0-3)
                 "date_transaction",  # date
                 "description",  # description
-                "amount",  # amount
+                "amount",  # amount (normalized by parser)
                 "currency-code",  # currency
                 # Account information (4-7)
                 "account-name",  # account_name
@@ -474,6 +523,13 @@ class CsvTarget(Target):
                 # Raw data preservation (51-52)
                 "note",  # raw_text
                 "note",  # raw_json
+                # Amex-specific fields (53-58)
+                "note",  # card_member
+                "note",  # appears_on_statement
+                "note",  # address
+                "note",  # city_state
+                "note",  # zip_code
+                "note",  # extended_details
             ],
             "do_mapping": {
                 # Core transaction data (0-3)
@@ -539,6 +595,13 @@ class CsvTarget(Target):
                 # Raw data preservation (51-52) - all stored in notes
                 "51": False,  # raw_text
                 "52": False,  # raw_json
+                # Amex-specific fields (53-58) - all stored in notes
+                "53": False,  # card_member
+                "54": False,  # appears_on_statement
+                "55": False,  # address
+                "56": False,  # city_state
+                "57": False,  # zip_code
+                "58": False,  # extended_details
             },
             "mapping": {
                 "3": {  # currency-code
@@ -742,7 +805,6 @@ class CsvTarget(Target):
             bank_person_pattern, cleaned_description, re.IGNORECASE
         )
         if bank_person_match:
-            bank_code = bank_person_match.group(1)
             title = bank_person_match.group(2).strip()
             person_name = bank_person_match.group(3).strip()
 

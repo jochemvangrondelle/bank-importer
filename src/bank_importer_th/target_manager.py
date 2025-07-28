@@ -18,7 +18,18 @@ class TargetManager:
         self.config_manager = config_manager
         self.db_manager = db_manager
         self.targets: dict[str, Target] = {}
+        self.processor = None  # Will be initialized when needed
         self._initialize_targets()
+
+    def _get_processor(self):
+        """Get or create processor instance."""
+        if self.processor is None:
+            from .processor import Processor
+
+            # Use the same config file path as the config manager
+            config_path = self.config_manager.config_path
+            self.processor = Processor(config_path)
+        return self.processor
 
     def _initialize_targets(self) -> None:
         """Initialize available targets."""
@@ -38,25 +49,33 @@ class TargetManager:
         return list(self.targets.keys())
 
     def _get_bank_type_from_source_file(self, source_file: str) -> str:
-        """Extract bank type from source file path."""
+        """Extract bank type from source file path using parser metadata."""
         source_path = Path(source_file)
 
-        # Check for bank-specific directories
-        if "krungsri" in source_path.parts or "krungsri" in source_file.lower():
-            return "krungsri"
-        elif "scb" in source_path.parts or "scb" in source_file.lower():
-            return "scb"
-        elif "siam" in source_file.lower() or "commercial" in source_file.lower():
-            return "scb"
-        else:
-            # Try to extract from filename
-            filename = source_path.name.lower()
-            if "krungsri" in filename:
-                return "krungsri"
-            elif "scb" in filename or "siam" in filename:
-                return "scb"
-            else:
-                return "unknown"
+        # Get processor and use parser detector
+        processor = self._get_processor()
+
+        # Get parent folder hint for better detection
+        parent_folder = source_path.parent.name
+
+        # Use parser detector to find the appropriate parser
+        detected_parser_name = processor.parser_detector.detect_parser(
+            source_path, parent_folder
+        )
+
+        if not detected_parser_name:
+            raise ValueError(
+                f"No parser can handle file: {source_file}. "
+                f"This file should not have been imported in the first place. "
+                f"Please check the parser configuration and ensure all files can be parsed by an appropriate parser."
+            )
+
+        # Get the parser and return its bank type
+        parser = processor.get_parser(detected_parser_name)
+        if not parser:
+            raise ValueError(f"Parser '{detected_parser_name}' not found")
+
+        return parser.get_bank_type()
 
     def _get_organized_output_dir(self, bank_type: str, base_output_dir: str) -> Path:
         """Get organized output directory for a bank type."""
@@ -228,22 +247,61 @@ class TargetManager:
         for source_file in source_files:
             transactions = self.db_manager.get_transactions_by_source_file(source_file)
             if transactions:
-                bank_type = self._get_bank_type_from_source_file(source_file)
-                organized_dir = self._get_organized_output_dir(
-                    bank_type, base_output_dir
-                )
+                # Check if this file has already been exported to this target
+                if self.db_manager.has_source_file_been_exported(
+                    source_file, target_name
+                ):
+                    logger = get_logger("target_manager")
+                    logger.info(
+                        f"⏭️  Skipping {source_file} - already exported to {target_name}"
+                    )
+                    # Add to results as skipped
+                    results[f"skipped_{source_file}"] = TargetResult(
+                        target_name=target_name,
+                        success=True,
+                        exported_count=0,
+                        skipped_count=len(transactions),
+                        error_count=0,
+                        error_message=None,
+                    )
+                    continue
 
-                # Log file processing
-                logger = get_logger("target_manager")
-                logger.info(
-                    f"📄 Processing file: {source_file} ({len(transactions)} transactions)"
-                )
+                try:
+                    bank_type = self._get_bank_type_from_source_file(source_file)
+                    organized_dir = self._get_organized_output_dir(
+                        bank_type, base_output_dir
+                    )
 
-                # Add to bank-specific transactions
-                if bank_type not in bank_transactions:
-                    bank_transactions[bank_type] = []
-                bank_transactions[bank_type].extend(transactions)
-                all_transactions.extend(transactions)
+                    # Log file processing
+                    logger = get_logger("target_manager")
+                    logger.info(
+                        f"📄 Processing file: {source_file} ({len(transactions)} transactions)"
+                    )
+
+                    # Add to bank-specific transactions
+                    if bank_type not in bank_transactions:
+                        bank_transactions[bank_type] = []
+                    bank_transactions[bank_type].extend(transactions)
+                    all_transactions.extend(transactions)
+
+                except ValueError as e:
+                    # File cannot be parsed by any parser - this is an error
+                    logger = get_logger("target_manager")
+                    logger.error(
+                        f"❌ Cannot export file {source_file}: {e}. "
+                        f"This file should not have been imported in the first place. "
+                        f"Skipping export for this file."
+                    )
+                    # Add to results as an error
+                    results[f"error_{source_file}"] = TargetResult(
+                        target_name=target_name,
+                        success=False,
+                        exported_count=0,
+                        skipped_count=0,
+                        error_count=len(transactions),
+                        error_message=str(e),
+                    )
+                    continue
 
                 # Create export session for this source file
                 session_name = f"export_{target_name}_source_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -258,12 +316,51 @@ class TargetManager:
                 # Get account configuration for translation settings
                 account_config = {}
                 if transactions:
-                    account_number = transactions[0].account_number
-                    # Find the account configuration by account number
-                    for acc in self.config_manager.get_all_accounts():
-                        if acc.get("account_number") == account_number:
-                            account_config = acc
-                            break
+                    # Try to find the parser for this file
+                    source_path = Path(source_file)
+                    processor = self._get_processor()
+
+                    # Get parent folder hint for better detection
+                    parent_folder = source_path.parent.name
+
+                    # Use parser detector to find the appropriate parser
+                    detected_parser_name = processor.parser_detector.detect_parser(
+                        source_path, parent_folder
+                    )
+
+                    if detected_parser_name:
+                        parser = processor.get_parser(detected_parser_name)
+                        if parser:
+                            # Use parser's default configuration
+                            account_config = {
+                                "name": parser.get_parser_name(),
+                                "bank_name": parser.get_export_config().get(
+                                    "bank_name", "Unknown Bank"
+                                ),
+                                "account_name": parser.get_default_account_name(),
+                                "account_number": parser.get_default_account_number(),
+                                "currency": parser.get_default_currency(),
+                                "country_code": parser.get_default_country_code(),
+                                "translation": {
+                                    "enabled": parser.get_export_config().get(
+                                        "supports_translation", False
+                                    ),
+                                    "source_language": parser.get_export_config().get(
+                                        "translation_source_language", "en"
+                                    ),
+                                    "target_language": parser.get_export_config().get(
+                                        "translation_target_language", "en"
+                                    ),
+                                },
+                            }
+
+                    # Fallback to account number matching if parser not found
+                    if not account_config:
+                        account_number = transactions[0].account_number
+                        for acc in self.config_manager.get_all_accounts():
+                            if acc.get("account_number") == account_number:
+                                account_config = acc
+                                break
 
                 # Export transactions for this source file
                 config = {

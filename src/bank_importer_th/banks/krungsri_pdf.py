@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import pdfplumber
 import pytz
@@ -16,6 +16,60 @@ from ..models.transaction import Transaction
 
 class KrungsriPdfParser(Parser):
     """Parser for Krungsri Bank PDF statements."""
+
+    def get_bank_type(self) -> str:
+        """Get the bank type identifier for this parser."""
+        return "krungsri"
+
+    def get_export_config(self) -> Dict[str, Any]:
+        """Get export configuration specific to this parser."""
+        return {
+            "bank_name": "Krungsri Bank",
+            "default_account_name": "Krungsri Savings Account",
+            "default_account_number": "769-1-32483-6",
+            "default_currency": "THB",
+            "default_country_code": "TH",
+            "supports_foreign_currency": False,
+            "supports_translation": True,
+            "translation_source_language": "TH",
+            "translation_target_language": "en",
+        }
+
+    def get_parser_name(self) -> str:
+        """Get the parser name identifier."""
+        return "krungsri_pdf"
+
+    def get_default_account_name(self) -> str:
+        """Get the default account name for this parser."""
+        return "Krungsri Savings Account"
+
+    def get_default_account_number(self) -> str:
+        """Get the default account number for this parser."""
+        return "769-1-32483-6"
+
+    def get_default_currency(self) -> str:
+        """Get the default currency for this parser."""
+        return "THB"
+
+    def get_default_country_code(self) -> str:
+        """Get the default country code for this parser."""
+        return "TH"
+
+    def get_supported_file_patterns(self) -> list[str]:
+        """Get list of supported file patterns for this parser."""
+        return ["*.pdf"]
+
+    def get_supported_extensions(self) -> list[str]:
+        """Get list of supported file extensions for this parser."""
+        return [".pdf"]
+
+    def get_parser_description(self) -> str:
+        """Get a human-readable description of this parser."""
+        return "Krungsri Bank PDF Statement Parser"
+
+    def get_parser_version(self) -> str:
+        """Get the parser version."""
+        return "1.0.0"
 
     def can_parse(self, file_path: Path) -> bool:
         """Check if this parser can handle the given file."""
@@ -118,6 +172,7 @@ class KrungsriPdfParser(Parser):
                 or line.startswith("Statement of")
                 or line.startswith("Period")
                 or line.startswith("1222 Rama III")  # Skip footer
+                or line.startswith("Bank of Ayudhya")  # Skip footer
             ):
                 continue
 
@@ -155,11 +210,11 @@ class KrungsriPdfParser(Parser):
         line = line.strip()
 
         # Split the line into parts
-        # Format: Date/Time Transaction Withdrawal/Deposit Outstanding Balance Channel Description
+        # Format: Date/Time Transaction Type Amount Balance Channel Description
         parts = line.split()
 
-        # Tax transactions have only 5 parts, others have 6+
-        if len(parts) < 5:
+        # Need at least 6 parts: Date Time Type Amount Balance Channel
+        if len(parts) < 6:
             return None
 
         try:
@@ -171,7 +226,7 @@ class KrungsriPdfParser(Parser):
             tz = pytz.timezone(timezone_str)
             date = tz.localize(naive_date)
 
-            # Find the amount and balance
+            # Find the amounts in the line
             # Look for patterns like "5,000.00" or "1,577.18"
             amount_pattern = r"[\d,]+\.\d{2}"
             amounts = re.findall(amount_pattern, line)
@@ -179,16 +234,31 @@ class KrungsriPdfParser(Parser):
             if len(amounts) < 2:
                 return None
 
-            # First amount is the transaction amount, second is the balance
+            # Format: Date/Time Transaction Type Amount Balance Channel Description
+            # amounts[0] = transaction amount, amounts[1] = balance
             amount_str = amounts[0].replace(",", "")
             balance_str = amounts[1].replace(",", "")
 
             amount = Decimal(amount_str)
             balance = Decimal(balance_str)
 
-            # Make withdrawals negative (same logic as text parser)
-            if self._is_withdrawal(line):
-                amount = -amount
+            # Determine if this is a withdrawal or deposit based on transaction type
+            # Look for the transaction type (between time and first amount)
+            time_end = line.find(parts[1]) + len(parts[1])
+            amount_start = line.find(amounts[0])
+            transaction_type_part = line[time_end:amount_start].strip()
+
+            # Determine if it's a withdrawal or deposit
+            if (
+                "Withdrawal" in transaction_type_part
+                or "Withd" in transaction_type_part
+            ):
+                amount = -abs(amount)  # Make it negative for withdrawal
+            elif "Deposit" in transaction_type_part:
+                amount = abs(amount)  # Keep it positive for deposit
+            else:
+                # Default to negative (withdrawal) for other types
+                amount = -abs(amount)
 
             # Determine transaction type from the description
             transaction_type = self._determine_transaction_type(line)
@@ -198,17 +268,10 @@ class KrungsriPdfParser(Parser):
             balance_end = line.find(balance_str) + len(balance_str)
             description_part = line[balance_end:].strip()
 
-            # For Tax transactions, there's no additional description
-            if "Tax" in line:
-                channel, description = None, ""
-            elif "Interest" in line:
-                # For Interest transactions, clean up the description
-                channel, description = None, ""
-            else:
-                # Split description into channel and description
-                channel, description = self._extract_channel_and_description(
-                    description_part
-                )
+            # Extract channel and description
+            channel, description = self._extract_channel_and_description(
+                description_part
+            )
 
             # Create transaction object
             return Transaction(

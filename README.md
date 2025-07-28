@@ -58,6 +58,7 @@ This application is specifically designed for Thai bank statements but built wit
 
 - **Krungsri Bank** (PDF and text formats)
 - **Siam Commercial Bank (SCB)** (PDF format)
+- **American Express Thailand** (CSV format)
 - **Generic parsers** for CSV, JSON, and fixed-width formats
 
 The application exports to CSV format optimized for Firefly-III's import system, but is intentionally designed without a direct Firefly-III target to rely on Firefly's own robust importer.
@@ -68,6 +69,7 @@ The application exports to CSV format optimized for Firefly-III's import system,
 
 - **Krungsri Bank**: PDF and text statement parsing
 - **Siam Commercial Bank (SCB)**: PDF statement parsing
+- **American Express Thailand**: CSV statement parsing with foreign currency support
 - **Generic parsers**: CSV, JSON, and fixed-width file support
 
 ### 📊 **Export Formats**
@@ -266,6 +268,17 @@ account_number = "YOUR_ACCOUNT_NUMBER"
 account_name   = "YOUR_NAME"
 bank_name      = "Krungsri Bank"
 password       = "YOUR_PASSWORD"
+
+[[accounts]]
+name           = "amex_th_csv"
+parser         = "amex_th_csv"
+file_pattern   = "*.csv"
+file_path      = "data/in/amex_th"
+account_number = "XXXX-XXXXXX-43002"
+account_name   = "TH - CC AMEX (Billed / Uncharged)"
+bank_name      = "American Express Thailand"
+currency       = "THB"
+country_code   = "TH"
 ```
 
 ## Project Structure
@@ -335,6 +348,18 @@ docker-compose run --rm bank-importer import-files data/in/
 - **Formats**: PDF statements
 - **Features**: Monthly statement parsing
 - **File patterns**: `*AcctSt_*.pdf`
+
+### American Express Thailand
+
+- **Formats**: CSV statements
+- **Features**:
+  - Foreign currency transaction support with conversion rates
+  - Country code detection in merchant names (e.g., "SHOPEETH" → "SHOPEE TH")
+  - Amount normalization (expenses negative, repayments positive)
+  - Unique ID generation using AMEX reference numbers
+  - Comprehensive transaction metadata preservation
+- **File patterns**: `*.csv`
+- **Account configuration**: Requires `account_name`, `account_number`, `currency`, and `country_code`
 
 ### Generic Parsers
 
@@ -573,6 +598,15 @@ make release
 - **Docker development environment**: Easy setup for contributors
 - **Publishing guidelines**: Instructions for Docker Hub distribution
 - **Best practices**: Security and performance recommendations
+
+### 💳 **American Express Thailand Support**
+
+- **CSV parser**: Full support for AMEX Thailand CSV statement format
+- **Foreign currency handling**: Automatic conversion rates and original currency preservation
+- **Smart merchant formatting**: Country code detection (e.g., "SHOPEETH" → "SHOPEE TH")
+- **Amount normalization**: Consistent expense/income direction across all banks
+- **Unique ID generation**: Uses AMEX reference numbers for duplicate prevention
+- **Comprehensive testing**: Full test suite with anonymized sample data
 
 ---
 

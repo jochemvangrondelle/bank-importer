@@ -67,6 +67,28 @@ password       = "01011980"
     use_api_translation = true
     preserve_original   = true
 
+[[accounts]]
+name           = "amex_th_csv"
+parser         = "amex_th_csv"
+file_pattern   = "*.csv"
+file_path      = "data/in/amex_th"
+account_number = "XXXX-XXXXXX-12345"
+account_name   = "TH - CC AMEX (Billed / Uncharged)"
+bank_name      = "American Express Thailand"
+branch_name    = ""
+currency       = "THB"
+country_code   = "TH"
+reference      = "amex_th_csv"
+
+    # Translation settings for this account
+    [accounts.translation]
+    enabled             = false
+    source_language     = "en"
+    target_language     = "en"
+    use_term_mapping    = false
+    use_api_translation = false
+    preserve_original   = true
+
     # Example configurations for generic parsers
     # Uncomment and modify as needed for your data files
 

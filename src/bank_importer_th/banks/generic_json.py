@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 from ..interfaces.parser import Parser
 from ..models.transaction import Transaction
@@ -13,6 +13,60 @@ from ..models.transaction import Transaction
 
 class GenericJsonParser(Parser):
     """Generic parser for JSON files containing transaction data."""
+
+    def get_bank_type(self) -> str:
+        """Get the bank type identifier for this parser."""
+        return "generic"
+
+    def get_export_config(self) -> Dict[str, Any]:
+        """Get export configuration specific to this parser."""
+        return {
+            "bank_name": "Generic Bank",
+            "default_account_name": "Generic Account",
+            "default_account_number": "0000000000",
+            "default_currency": "THB",
+            "default_country_code": "TH",
+            "supports_foreign_currency": False,
+            "supports_translation": False,
+            "translation_source_language": "en",
+            "translation_target_language": "en",
+        }
+
+    def get_parser_name(self) -> str:
+        """Get the parser name identifier."""
+        return "generic_json"
+
+    def get_default_account_name(self) -> str:
+        """Get the default account name for this parser."""
+        return "Generic Account"
+
+    def get_default_account_number(self) -> str:
+        """Get the default account number for this parser."""
+        return "0000000000"
+
+    def get_default_currency(self) -> str:
+        """Get the default currency for this parser."""
+        return "THB"
+
+    def get_default_country_code(self) -> str:
+        """Get the default country code for this parser."""
+        return "TH"
+
+    def get_supported_file_patterns(self) -> list[str]:
+        """Get list of supported file patterns for this parser."""
+        return ["*.json", "*.jsonl"]
+
+    def get_supported_extensions(self) -> list[str]:
+        """Get list of supported file extensions for this parser."""
+        return [".json", ".jsonl"]
+
+    def get_parser_description(self) -> str:
+        """Get a human-readable description of this parser."""
+        return "Generic JSON parser for transaction data"
+
+    def get_parser_version(self) -> str:
+        """Get the parser version."""
+        return "1.0.0"
 
     def can_parse(self, file_path: Path) -> bool:
         """Check if this parser can handle the given file."""

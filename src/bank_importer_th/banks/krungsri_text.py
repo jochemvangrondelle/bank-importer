@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import Any, Dict
 
 import pytz
 
@@ -14,6 +15,60 @@ from ..models.transaction import Transaction
 
 class KrungsriTextParser(Parser):
     """Parser for Krungsri Bank text statements."""
+
+    def get_bank_type(self) -> str:
+        """Get the bank type identifier for this parser."""
+        return "krungsri"
+
+    def get_export_config(self) -> Dict[str, Any]:
+        """Get export configuration specific to this parser."""
+        return {
+            "bank_name": "Krungsri Bank",
+            "default_account_name": "Krungsri Savings Account",
+            "default_account_number": "769-1-32483-6",
+            "default_currency": "THB",
+            "default_country_code": "TH",
+            "supports_foreign_currency": False,
+            "supports_translation": True,
+            "translation_source_language": "TH",
+            "translation_target_language": "en",
+        }
+
+    def get_parser_name(self) -> str:
+        """Get the parser name identifier."""
+        return "krungsri_text"
+
+    def get_default_account_name(self) -> str:
+        """Get the default account name for this parser."""
+        return "Krungsri Savings Account"
+
+    def get_default_account_number(self) -> str:
+        """Get the default account number for this parser."""
+        return "769-1-32483-6"
+
+    def get_default_currency(self) -> str:
+        """Get the default currency for this parser."""
+        return "THB"
+
+    def get_default_country_code(self) -> str:
+        """Get the default country code for this parser."""
+        return "TH"
+
+    def get_supported_file_patterns(self) -> list[str]:
+        """Get list of supported file patterns for this parser."""
+        return ["*.txt"]
+
+    def get_supported_extensions(self) -> list[str]:
+        """Get list of supported file extensions for this parser."""
+        return [".txt"]
+
+    def get_parser_description(self) -> str:
+        """Get a human-readable description of this parser."""
+        return "Krungsri Bank text statement parser"
+
+    def get_parser_version(self) -> str:
+        """Get the parser version."""
+        return "1.0.0"
 
     def can_parse(self, file_path: Path) -> bool:
         """Check if this parser can handle the given file."""
@@ -118,11 +173,15 @@ class KrungsriTextParser(Parser):
                 description = remaining
 
         # Determine if it's a credit or debit
-        if "Deposit" in transaction_type or "Interest" in transaction_type:
-            # Keep amount positive for deposits
-            pass
+        if (
+            "Deposit" in transaction_type
+            or "Interest" in transaction_type
+            or "Credit" in transaction_type
+        ):
+            # Keep amount positive for credits (money coming in)
+            amount = abs(amount)
         else:
-            # Make amount negative for withdrawals/payments
+            # Make amount negative for withdrawals/payments (money going out)
             amount = -abs(amount)
 
         return Transaction(

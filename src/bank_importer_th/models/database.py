@@ -397,3 +397,14 @@ class DatabaseManager:
 
             exported_count = len(session.exec(statement).all())
             return exported_count > 0
+
+    def has_source_file_been_imported(self, source_file: str) -> bool:
+        """Check if a source file has been imported (has completed import session)."""
+        with Session(self.engine) as session:
+            # Check if there's a completed import session for this file
+            statement = select(ImportSession).where(
+                ImportSession.file_path == source_file,
+                ImportSession.status == "completed",
+            )
+            import_session = session.exec(statement).first()
+            return import_session is not None
