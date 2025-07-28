@@ -1,0 +1,6 @@
+[submodule "src/submodules/firefly-iii-client"]
+	path = src/submodules/firefly-iii-client
+	url = git@github.com:jochemvangrondelle/firefly-iii-client.git
+[submodule "src/submodules/import-configurations"]
+	path = src/submodules/import-configurations
+	url = git@github.com:firefly-iii/import-configurations.git

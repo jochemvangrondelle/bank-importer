@@ -11,14 +11,16 @@ from rich.logging import RichHandler
 from rich.theme import Theme
 
 # Custom theme for different log levels
-CUSTOM_THEME = Theme({
-    "info": "cyan",
-    "warning": "yellow",
-    "error": "red",
-    "critical": "red bold",
-    "debug": "dim",
-    "success": "green",
-})
+CUSTOM_THEME = Theme(
+    {
+        "info": "cyan",
+        "warning": "yellow",
+        "error": "red",
+        "critical": "red bold",
+        "debug": "dim",
+        "success": "green",
+    }
+)
 
 _console = None
 
@@ -66,7 +68,9 @@ class SecretMaskingFormatter(logging.Formatter):
         re.compile(pattern, re.IGNORECASE) for pattern in SENSITIVE_PATTERNS
     ]
 
-    def __init__(self, fmt: str | None = None, datefmt: str | None = None, style: str = "%") -> None:
+    def __init__(
+        self, fmt: str | None = None, datefmt: str | None = None, style: str = "%"
+    ) -> None:
         super().__init__(fmt, datefmt, style)  # type: ignore[call-arg]
 
     def format(self, record: logging.LogRecord) -> str:
@@ -127,7 +131,11 @@ class SecretMaskingFormatter(logging.Formatter):
         if len(groups) == 2:
             # Simple key=value pattern
             prefix, value = groups
-            masked_value = value[:4] + "*" * (len(value) - 8) + value[-4:] if len(value) > 8 else "*" * len(value)
+            masked_value = (
+                value[:4] + "*" * (len(value) - 8) + value[-4:]
+                if len(value) > 8
+                else "*" * len(value)
+            )
             return f"{prefix}{masked_value}"
 
         elif len(groups) == 3:
@@ -274,7 +282,7 @@ def setup_logging(
         log_file = os.getenv("LOG_FILE")
 
     # Get logger
-    logger = logging.getLogger("firefly_exchange_rate_importer")
+    logger = logging.getLogger("bank_importer_th")
     logger.setLevel(getattr(logging, log_level.upper()))
 
     # Clear existing handlers
@@ -294,10 +302,12 @@ def setup_logging(
         logger.addHandler(console_handler)
 
     # File handler for detailed logging with secret masking
-    file_path = log_path / log_file if log_file else log_path / "firefly_exchange_rate_importer.log"
+    file_path = log_path / log_file if log_file else log_path / "bank_importer_th.log"
 
     file_handler = DetailedFileHandler(file_path)
-    file_handler.setLevel(getattr(logging, file_level.upper()))  # File captures everything
+    file_handler.setLevel(
+        getattr(logging, file_level.upper())
+    )  # File captures everything
     logger.addHandler(file_handler)
 
     # Prevent propagation to avoid duplicate logs
@@ -317,8 +327,8 @@ def get_logger(name: str | None = None) -> logging.Logger:
 
     """
     if name:
-        return logging.getLogger(f"firefly_exchange_rate_importer.{name}")
-    return logging.getLogger("firefly_exchange_rate_importer")
+        return logging.getLogger(f"bank_importer_th.{name}")
+    return logging.getLogger("bank_importer_th")
 
 
 def mask_sensitive_data(data: str) -> str:
@@ -327,7 +337,9 @@ def mask_sensitive_data(data: str) -> str:
     return formatter._mask_sensitive_data(data)
 
 
-def log_sensitive_data_safely(logger, level: str, message: str, sensitive_data: dict | None = None) -> None:
+def log_sensitive_data_safely(
+    logger, level: str, message: str, sensitive_data: dict | None = None
+) -> None:
     """Safely log messages that might contain sensitive data.
 
     Args:
@@ -374,14 +386,21 @@ def _mask_sensitive_dict(data: dict) -> dict:
             # Check if the key contains sensitive information
             if any(sensitive in key.lower() for sensitive in sensitive_keys):
                 # For sensitive keys, always mask the value
-                masked_value = value[:4] + "*" * (len(value) - 8) + value[-4:] if len(value) > 8 else "*" * len(value)
+                masked_value = (
+                    value[:4] + "*" * (len(value) - 8) + value[-4:]
+                    if len(value) > 8
+                    else "*" * len(value)
+                )
                 safe_data[key] = masked_value
             else:
                 # For non-sensitive keys, only mask if the value contains sensitive patterns
                 safe_data[key] = mask_sensitive_data(value)
         elif isinstance(value, list | tuple):
             # Handle lists/tuples by masking sensitive strings within them
-            safe_data[key] = [mask_sensitive_data(str(item)) if isinstance(item, str) else item for item in value]
+            safe_data[key] = [
+                mask_sensitive_data(str(item)) if isinstance(item, str) else item
+                for item in value
+            ]
         else:
             # For other types, convert to string and check for sensitive patterns
             str_value = str(value)
@@ -428,7 +447,7 @@ def get_log_file_path() -> str:
 
     # Get log directory and file from environment or defaults
     log_dir = os.getenv("LOG_DIR", "./logs")
-    log_file = os.getenv("LOG_FILE", "firefly_exchange_rate_importer.log")
+    log_file = os.getenv("LOG_FILE", "bank_importer_th.log")
 
     log_path = Path(log_dir)
     file_path = log_path / log_file
@@ -489,14 +508,14 @@ def log_progress(current: int, total: int, description: str = "Processing") -> N
 def log_startup() -> None:
     """Log startup information."""
     logger = get_logger()
-    logger.info("🚀 Starting Bank Importer Thailand")
+    logger.info("🚀 Starting Bank Importer")
     logger.info("📋 Loading configuration and initializing components...")
 
 
 def log_shutdown() -> None:
     """Log shutdown information."""
     logger = get_logger()
-    logger.info("🛑 Shutting down Bank Importer Thailand")
+    logger.info("🛑 Shutting down Bank Importer")
     logger.info("💾 Saving data and cleaning up...")
 
 
@@ -556,7 +575,9 @@ def log_worker_activity(worker_id: int, action: str, details: str = "") -> None:
     logger.debug(message)
 
 
-def log_task_progress(task_type: str, current: int, total: int, details: str = "") -> None:
+def log_task_progress(
+    task_type: str, current: int, total: int, details: str = ""
+) -> None:
     """Log task progress with context."""
     logger = get_logger()
     percentage = (current / total) * 100 if total > 0 else 0

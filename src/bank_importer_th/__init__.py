@@ -1,4 +1,4 @@
-"""Bank Importer Thailand."""
+"""Bank Importer - Multi-language financial data processing."""
 
 __version__ = "0.1.0"
 

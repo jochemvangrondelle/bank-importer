@@ -1,36 +1,72 @@
-.PHONY: install
-install: ## Install the virtual environment and install the pre-commit hooks
-	@echo "🚀 Creating virtual environment using uv"
-	@uv sync
-	@uv run pre-commit install
+.PHONY: help install test lint clean version bump-patch bump-minor bump-major docker-build docker-push
 
-.PHONY: check
-check: ## Run code quality tools.
-	@echo "🚀 Checking lock file consistency with 'pyproject.toml'"
-	@uv lock --locked
-	@echo "🚀 Linting code: Running pre-commit"
-	@uv run pre-commit run -a
-	@echo "🚀 Static type checking: Running mypy"
-	@uv run mypy
+# Default target
+help: ## Show this help message
+	@echo "Bank Importer - Available Commands:"
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: test
-test: ## Test the code with pytest
-	@echo "🚀 Testing code: Running pytest"
-	@uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml
+# Development
+install: ## Install development dependencies
+	uv sync --group dev
 
-.PHONY: build
-build: clean-build ## Build wheel file
-	@echo "🚀 Creating wheel file"
-	@uvx --from build pyproject-build --installer uv
+test: ## Run tests
+	uv run pytest tests/ -v
 
-.PHONY: clean-build
-clean-build: ## Clean build artifacts
-	@echo "🚀 Removing build artifacts"
-	@uv run python -c "import shutil; import os; shutil.rmtree('dist') if os.path.exists('dist') else None"
+lint: ## Run linting
+	uv run ruff check src/ tests/
+	uv run mypy src/
 
-.PHONY: help
-help:
-	@uv run python -c "import re; \
-	[[print(f'\033[36m{m[0]:<20}\033[0m {m[1]}') for m in re.findall(r'^([a-zA-Z_-]+):.*?## (.*)$$', open(makefile).read(), re.M)] for makefile in ('$(MAKEFILE_LIST)').strip().split()]"
+clean: ## Clean build artifacts
+	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/
 
-.DEFAULT_GOAL := help
+# Version management
+version: ## Show current version
+	@uv run python -c "from src.bank_importer_th import __version__; print(__version__)"
+
+bump-patch: ## Bump patch version (0.1.0 -> 0.1.1)
+	bump2version patch
+
+bump-minor: ## Bump minor version (0.1.0 -> 0.2.0)
+	bump2version minor
+
+bump-major: ## Bump major version (0.1.0 -> 1.0.0)
+	bump2version major
+
+# Docker
+docker-build: ## Build Docker image
+	docker build -t bank-importer-th:$(shell cat VERSION) .
+	docker tag bank-importer-th:$(shell cat VERSION) bank-importer-th:latest
+
+docker-push: ## Push Docker image to registry
+	docker push bank-importer-th:$(shell cat VERSION)
+	docker push bank-importer-th:latest
+
+# Release
+release: ## Create a new release (bump patch, build, push)
+	@echo "Creating release for version $(shell cat VERSION)..."
+	$(MAKE) bump-patch
+	$(MAKE) docker-build
+	$(MAKE) docker-push
+	@echo "Release $(shell cat VERSION) created successfully!"
+
+# CI/CD helpers
+ci-test: ## Run tests for CI
+	uv run pytest tests/ --cov=src/ --cov-report=xml
+
+ci-lint: ## Run linting for CI
+	uv run ruff check src/ tests/
+	uv run mypy src/
+
+ci-build: ## Build for CI
+	uv run python -m build
+
+# Development workflow
+dev-setup: ## Setup development environment
+	uv sync --group dev
+	uv run pre-commit install
+
+dev-check: ## Run all development checks
+	$(MAKE) lint
+	$(MAKE) test
+	$(MAKE) version

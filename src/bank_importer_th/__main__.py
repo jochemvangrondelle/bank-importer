@@ -1,6 +1,6 @@
-"""Main entry point for the firefly-exchange-rate-importer package."""
+"""Main entry point for the bank-importer-th package."""
 
-from .cli import cli
+from .cli_main import main
 
 if __name__ == "__main__":
-    cli()
+    main()

@@ -18,10 +18,61 @@ class GenericCsvParser(Parser):
 
     def can_parse(self, file_path: Path) -> bool:
         """Check if this parser can handle the given file."""
-        return file_path.suffix.lower() in [".csv", ".tsv", ".txt"]
+        # Check if file exists and is a file (not directory)
+        if not file_path.exists():
+            raise ValueError(f"File does not exist: {file_path}")
+        if not file_path.is_file():
+            raise ValueError(f"Path is not a file: {file_path}")
 
-    def parse_file(self, file_path: Path, account_config: dict[str, Any]) -> Iterator[Transaction]:
+        # Check file extension
+        if file_path.suffix.lower() not in [".csv", ".tsv", ".txt"]:
+            return False
+
+        # Try to validate CSV content
+        try:
+            with open(file_path, encoding="utf-8") as file:
+                sample = file.read(4096)  # Read first 4KB
+        except UnicodeDecodeError:
+            try:
+                with open(file_path, encoding="latin-1") as file:
+                    sample = file.read(4096)
+            except Exception:
+                return False
+
+        # Find the first non-empty line
+        lines = [line.strip() for line in sample.split("\n") if line.strip()]
+        if not lines:
+            return False
+
+        first_line = lines[0]
+
+        # Check if the first line contains common CSV delimiters
+        delimiters = [",", "\t", ";", "|"]
+        delimiter_found = False
+        for delim in delimiters:
+            if delim in first_line:
+                delimiter_found = True
+                break
+
+        if not delimiter_found:
+            return False
+
+        # Check if we have at least 2 lines (header + data)
+        if len(lines) < 2:
+            return False
+
+        return True
+
+    def parse_file(
+        self, file_path: Path, account_config: dict[str, Any]
+    ) -> Iterator[Transaction]:
         """Parse CSV/TSV file and yield Transaction objects."""
+        # Validate file exists and is a file
+        if not file_path.exists():
+            raise ValueError(f"File does not exist: {file_path}")
+        if not file_path.is_file():
+            raise ValueError(f"Path is not a file: {file_path}")
+
         try:
             # Auto-detect delimiter and quote character
             delimiter, quotechar = self._detect_format(file_path)
@@ -37,7 +88,10 @@ class GenericCsvParser(Parser):
 
                 # Parse CSV content
                 reader = csv.DictReader(
-                    content.splitlines(), delimiter=delimiter, quotechar=quotechar, skipinitialspace=True
+                    content.splitlines(),
+                    delimiter=delimiter,
+                    quotechar=quotechar,
+                    skipinitialspace=True,
                 )
 
                 # Validate headers
@@ -45,12 +99,18 @@ class GenericCsvParser(Parser):
                     raise ValueError("No headers found")
 
                 # Map headers to transaction fields
-                field_mapping = self._create_field_mapping(list(reader.fieldnames) if reader.fieldnames else None)
+                field_mapping = self._create_field_mapping(
+                    list(reader.fieldnames) if reader.fieldnames else None
+                )
 
                 # Process each row
-                for row_num, row in enumerate(reader, start=2):  # Start at 2 because row 1 is header
+                for row_num, row in enumerate(
+                    reader, start=2
+                ):  # Start at 2 because row 1 is header
                     try:
-                        transaction = self._parse_row(row, field_mapping, account_config, file_path, row_num)
+                        transaction = self._parse_row(
+                            row, field_mapping, account_config, file_path
+                        )
                         if transaction:
                             yield transaction
                     except Exception as e:
@@ -82,7 +142,7 @@ class GenericCsvParser(Parser):
         quote_chars = ['"', "'", ""]
 
         # Count occurrences of each delimiter
-        delimiter_counts = {}
+        delimiter_counts: dict[str, int] = {}
         for delim in delimiters:
             delimiter_counts[delim] = first_line.count(delim)
 
@@ -99,7 +159,7 @@ class GenericCsvParser(Parser):
             if quote and quote in first_line:
                 # Check if quotes are used consistently
                 quote_count = first_line.count(quote)
-                if quote_count > 0 and quote_count % 2 == 0:
+                if quote_count > 0:
                     quotechar = quote
                     break
 
@@ -115,29 +175,44 @@ class GenericCsvParser(Parser):
                     normalized = re.sub(r"[^\w]", "", header.lower())
                     normalized_headers[normalized] = header
 
-        # Define possible mappings for each transaction field
-        field_mappings = {
-            "date": ["date", "transactiondate", "txdate", "datetime", "time"],
-            "description": ["description", "desc", "memo", "note", "details", "narration"],
-            "amount": ["amount", "amt", "value", "sum", "total"],
-            "balance": ["balance", "bal", "runningbalance", "accountbalance"],
-            "transaction_type": ["type", "transactiontype", "txntype", "category"],
-            "account_number": ["account", "accountnumber", "accno", "accountid"],
-            "currency": ["currency", "curr", "ccy"],
-            "country_code": ["country", "countrycode", "cc"],
-            "channel": ["channel", "method", "source", "medium"],
-            "reference": ["reference", "ref", "id", "transactionid", "txid"],
+        # Standard field mappings
+        field_mapping = {
+            # Core fields
+            "date": normalized_headers.get("date", ""),
+            "description": normalized_headers.get("description", ""),
+            "amount": normalized_headers.get("amount", ""),
+            "balance": normalized_headers.get("balance", ""),
+            "transaction_type": normalized_headers.get("transactiontype", "")
+            or normalized_headers.get("transaction_type", ""),
+            "account_number": normalized_headers.get("accountnumber", ""),
+            # Enhanced balance tracking
+            "old_balance": normalized_headers.get("oldbalance", ""),
+            "new_balance": normalized_headers.get("newbalance", ""),
+            # Additional date fields
+            "transaction_date": normalized_headers.get("transactiondate", ""),
+            "value_date": normalized_headers.get("valuedate", ""),
+            "posting_date": normalized_headers.get("postingdate", ""),
+            "effective_date": normalized_headers.get("effectivedate", ""),
+            # Account and location
+            "currency": normalized_headers.get("currency", ""),
+            "country_code": normalized_headers.get("countrycode", ""),
+            # Transaction details
+            "channel": normalized_headers.get("channel", ""),
+            "reference": normalized_headers.get("reference", ""),
+            "check_number": normalized_headers.get("checknumber", ""),
+            "memo": normalized_headers.get("memo", ""),
+            "category": normalized_headers.get("category", ""),
+            "subcategory": normalized_headers.get("subcategory", ""),
+            # Additional metadata
+            "exchange_rate": normalized_headers.get("exchangerate", ""),
+            "foreign_currency": normalized_headers.get("foreigncurrency", ""),
+            "foreign_amount": normalized_headers.get("foreignamount", ""),
+            "fees": normalized_headers.get("fees", ""),
+            "interest": normalized_headers.get("interest", ""),
+            "tax": normalized_headers.get("tax", ""),
         }
 
-        # Create the actual mapping
-        mapping = {}
-        for field, possible_names in field_mappings.items():
-            for name in possible_names:
-                if name in normalized_headers:
-                    mapping[field] = normalized_headers[name]
-                    break
-
-        return mapping
+        return field_mapping
 
     def _parse_row(
         self,
@@ -145,78 +220,137 @@ class GenericCsvParser(Parser):
         field_mapping: dict[str, str],
         account_config: dict[str, Any],
         file_path: Path,
-        row_num: int,
-    ) -> Transaction | None:
+    ) -> Transaction:
         """Parse a single CSV row into a Transaction object."""
-        try:
-            # Extract values using field mapping
-            data = {}
-            for field, csv_header in field_mapping.items():
-                value = row.get(csv_header, "").strip()
-                if value:
-                    data[field] = value
+        # Extract basic fields with proper type handling
+        date_str = str(row.get(field_mapping.get("date", ""), ""))
+        description = str(row.get(field_mapping.get("description", ""), ""))
+        amount_str = str(row.get(field_mapping.get("amount", ""), ""))
+        balance_str = str(row.get(field_mapping.get("balance", ""), ""))
 
-            # Parse date
-            date = self._parse_date(data.get("date"), account_config)
-            if not date:
-                return None
+        # Enhanced balance tracking
+        old_balance_str = str(row.get(field_mapping.get("old_balance", ""), ""))
+        new_balance_str = str(row.get(field_mapping.get("new_balance", ""), ""))
 
-            # Parse amount
-            amount = self._parse_amount(data.get("amount"))
-            if amount is None:
-                return None
+        # Additional date fields
+        transaction_date_str = str(
+            row.get(field_mapping.get("transaction_date", ""), "")
+        )
+        value_date_str = str(row.get(field_mapping.get("value_date", ""), ""))
+        posting_date_str = str(row.get(field_mapping.get("posting_date", ""), ""))
+        effective_date_str = str(row.get(field_mapping.get("effective_date", ""), ""))
 
-            # Parse balance
-            balance = self._parse_amount(data.get("balance"))
-            if balance is None:
-                return None
+        # Transaction details
+        transaction_type = str(row.get(field_mapping.get("transaction_type", ""), ""))
+        channel = str(row.get(field_mapping.get("channel", ""), ""))
+        reference = str(row.get(field_mapping.get("reference", ""), ""))
+        check_number = str(row.get(field_mapping.get("check_number", ""), ""))
+        memo = str(row.get(field_mapping.get("memo", ""), ""))
+        category = str(row.get(field_mapping.get("category", ""), ""))
+        subcategory = str(row.get(field_mapping.get("subcategory", ""), ""))
 
-            # Determine transaction type if not provided
-            transaction_type = data.get("transaction_type")
-            if not transaction_type:
-                transaction_type = "withdrawal" if amount < 0 else "deposit"
+        # Additional metadata
+        exchange_rate_str = str(row.get(field_mapping.get("exchange_rate", ""), ""))
+        foreign_currency = str(row.get(field_mapping.get("foreign_currency", ""), ""))
+        foreign_amount_str = str(row.get(field_mapping.get("foreign_amount", ""), ""))
+        fees_str = str(row.get(field_mapping.get("fees", ""), ""))
+        interest_str = str(row.get(field_mapping.get("interest", ""), ""))
+        tax_str = str(row.get(field_mapping.get("tax", ""), ""))
 
-            # Create transaction object
-            return Transaction(
-                date=date,
-                description=data.get("description", "Unknown transaction"),
-                amount=amount,
-                balance=balance,
-                transaction_type=transaction_type,
-                account_number=data.get("account_number") or account_config.get("account_number", ""),
-                currency=data.get("currency") or account_config.get("currency", "THB"),
-                country_code=data.get("country_code") or account_config.get("country_code", "TH"),
-                channel=data.get("channel"),
-                reference=data.get("reference"),
-                file_path=str(file_path),
-                raw_text=str(row),
-                raw_json=json.dumps(row),
-                parser_name="generic_csv",
-            )
+        # Parse dates
+        date = self._parse_date(date_str) if date_str else datetime.now()
+        transaction_date = (
+            self._parse_date(transaction_date_str) if transaction_date_str else None
+        )
+        value_date = self._parse_date(value_date_str) if value_date_str else None
+        posting_date = self._parse_date(posting_date_str) if posting_date_str else None
+        effective_date = (
+            self._parse_date(effective_date_str) if effective_date_str else None
+        )
 
-        except Exception as e:
-            print(f"Error parsing row {row_num}: {e}")
+        # Parse amounts
+        amount = self._parse_amount(amount_str) if amount_str else Decimal("0")
+        balance = self._parse_amount(balance_str) if balance_str else Decimal("0")
+        old_balance = self._parse_amount(old_balance_str) if old_balance_str else None
+        new_balance = self._parse_amount(new_balance_str) if new_balance_str else None
+        exchange_rate = (
+            self._parse_amount(exchange_rate_str) if exchange_rate_str else None
+        )
+        foreign_amount = (
+            self._parse_amount(foreign_amount_str) if foreign_amount_str else None
+        )
+        fees = self._parse_amount(fees_str) if fees_str else None
+        interest = self._parse_amount(interest_str) if interest_str else None
+        tax = self._parse_amount(tax_str) if tax_str else None
+
+        # Get currency from CSV or use default
+        currency = str(
+            row.get(field_mapping.get("currency", ""), "")
+        ) or account_config.get("currency", "THB")
+
+        # Infer transaction type if not provided
+        if not transaction_type:
+            if amount > 0:
+                transaction_type = "deposit"
+            else:
+                transaction_type = "withdrawal"
+        else:
+            # Use the transaction type from CSV as-is
+            transaction_type = transaction_type.lower()
+
+        # Use new_balance if available, otherwise use balance
+        final_balance = new_balance if new_balance is not None else balance
+
+        # Skip transactions with missing required fields
+        if not date or not description or amount == 0:
             return None
 
-    def _parse_date(self, date_str: str | None, account_config: dict[str, Any]) -> datetime | None:
+        return Transaction(
+            date=date,
+            description=description,
+            amount=amount,
+            balance=final_balance,
+            old_balance=old_balance,
+            new_balance=new_balance,
+            transaction_type=transaction_type,
+            account_number=account_config.get("account_number", ""),
+            transaction_date=transaction_date,
+            value_date=value_date,
+            posting_date=posting_date,
+            effective_date=effective_date,
+            currency=currency,
+            country_code=account_config.get("country_code", "TH"),
+            channel=channel or None,
+            reference=reference or None,
+            check_number=check_number or None,
+            memo=memo or None,
+            category=category or None,
+            subcategory=subcategory or None,
+            exchange_rate=exchange_rate,
+            foreign_currency=foreign_currency or None,
+            foreign_amount=foreign_amount,
+            fees=fees,
+            interest=interest,
+            tax=tax,
+            raw_json=json.dumps(row),
+            parser_name="generic_csv",
+            source_file=str(file_path),
+        )
+
+    def _parse_date(self, date_str: str | None) -> datetime | None:
         """Parse date string into datetime object."""
         if not date_str:
             return None
 
-        # Common date formats to try
+        # Common date formats - prioritize DD/MM/YYYY over MM/DD/YYYY
         date_formats = [
-            "%Y-%m-%d",
-            "%d/%m/%Y",
-            "%m/%d/%Y",
-            "%Y/%m/%d",
-            "%d-%m-%Y",
-            "%m-%d-%Y",
+            "%Y-%m-%d",  # 2024-01-01
+            "%d/%m/%Y",  # 01/01/2024 (DD/MM/YYYY) - prioritize this
+            "%Y/%m/%d",  # 2024/01/01
+            "%d-%m-%Y",  # 01-01-2024
             "%Y-%m-%d %H:%M:%S",
             "%d/%m/%Y %H:%M:%S",
-            "%m/%d/%Y %H:%M:%S",
-            "%Y/%m/%d %H:%M:%S",
-            "%Y-%m-%dT%H:%M:%S",
-            "%Y-%m-%dT%H:%M:%S.%f",
+            # Note: Removed MM/DD/YYYY formats to avoid conflicts with DD/MM/YYYY
         ]
 
         for fmt in date_formats:
@@ -224,27 +358,6 @@ class GenericCsvParser(Parser):
                 return datetime.strptime(date_str.strip(), fmt)
             except ValueError:
                 continue
-
-        # If no format matches, try to extract date from string
-        try:
-            # Try to find a date pattern in the string
-            date_patterns = [
-                r"(\d{4}-\d{2}-\d{2})",
-                r"(\d{2}/\d{2}/\d{4})",
-                r"(\d{2}-\d{2}-\d{4})",
-            ]
-
-            for pattern in date_patterns:
-                match = re.search(pattern, date_str)
-                if match:
-                    date_part = match.group(1)
-                    for fmt in date_formats[:6]:  # Only try basic date formats
-                        try:
-                            return datetime.strptime(date_part, fmt)
-                        except ValueError:
-                            continue
-        except Exception:
-            pass
 
         return None
 

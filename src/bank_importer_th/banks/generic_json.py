@@ -18,7 +18,9 @@ class GenericJsonParser(Parser):
         """Check if this parser can handle the given file."""
         return file_path.suffix.lower() in [".json", ".jsonl"]
 
-    def parse_file(self, file_path: Path, account_config: dict[str, Any]) -> Iterator[Transaction]:
+    def parse_file(
+        self, file_path: Path, account_config: dict[str, Any]
+    ) -> Iterator[Transaction]:
         """Parse JSON file and yield Transaction objects."""
         try:
             with open(file_path, encoding="utf-8") as file:
@@ -30,11 +32,15 @@ class GenericJsonParser(Parser):
                         if line.strip():
                             try:
                                 data = json.loads(line.strip())
-                                transaction = self._parse_transaction(data, account_config, file_path, line_num)
+                                transaction = self._parse_transaction(
+                                    data, account_config, file_path, line_num
+                                )
                                 if transaction:
                                     yield transaction
                             except json.JSONDecodeError as e:
-                                print(f"Error parsing JSON line {line_num} in {file_path}: {e}")
+                                print(
+                                    f"Error parsing JSON line {line_num} in {file_path}: {e}"
+                                )
                                 continue
                 else:
                     # Regular JSON format
@@ -45,7 +51,9 @@ class GenericJsonParser(Parser):
                         if isinstance(data, list):
                             # Array of transactions
                             for i, item in enumerate(data):
-                                transaction = self._parse_transaction(item, account_config, file_path, i + 1)
+                                transaction = self._parse_transaction(
+                                    item, account_config, file_path, i + 1
+                                )
                                 if transaction:
                                     yield transaction
                         elif isinstance(data, dict):
@@ -55,12 +63,16 @@ class GenericJsonParser(Parser):
                                 transactions = data["transactions"]
                                 if isinstance(transactions, list):
                                     for i, item in enumerate(transactions):
-                                        transaction = self._parse_transaction(item, account_config, file_path, i + 1)
+                                        transaction = self._parse_transaction(
+                                            item, account_config, file_path, i + 1
+                                        )
                                         if transaction:
                                             yield transaction
                             else:
                                 # Single transaction object
-                                transaction = self._parse_transaction(data, account_config, file_path, 1)
+                                transaction = self._parse_transaction(
+                                    data, account_config, file_path, 1
+                                )
                                 if transaction:
                                     yield transaction
                         else:
@@ -73,7 +85,11 @@ class GenericJsonParser(Parser):
             raise ValueError("Error parsing JSON file") from e
 
     def _parse_transaction(
-        self, data: dict[str, Any], account_config: dict[str, Any], file_path: Path, item_num: int
+        self,
+        data: dict[str, Any],
+        account_config: dict[str, Any],
+        file_path: Path,
+        item_num: int,
     ) -> Transaction | None:
         """Parse a single transaction from JSON data."""
         try:
@@ -112,9 +128,12 @@ class GenericJsonParser(Parser):
                 amount=amount,
                 balance=balance,
                 transaction_type=transaction_type,
-                account_number=extracted_data.get("account_number") or account_config.get("account_number", ""),
-                currency=extracted_data.get("currency") or account_config.get("currency", "THB"),
-                country_code=extracted_data.get("country_code") or account_config.get("country_code", "TH"),
+                account_number=extracted_data.get("account_number")
+                or account_config.get("account_number", ""),
+                currency=extracted_data.get("currency")
+                or account_config.get("currency", "THB"),
+                country_code=extracted_data.get("country_code")
+                or account_config.get("country_code", "TH"),
                 channel=extracted_data.get("channel"),
                 reference=extracted_data.get("reference"),
                 file_path=str(file_path),
@@ -133,21 +152,63 @@ class GenericJsonParser(Parser):
         normalized_keys = {}
         for key in keys:
             if key:
-                normalized = key.lower().replace(" ", "").replace("_", "").replace("-", "")
+                normalized = (
+                    key.lower().replace(" ", "").replace("_", "").replace("-", "")
+                )
                 normalized_keys[normalized] = key
 
         # Define possible mappings for each transaction field
         field_mappings = {
-            "date": ["date", "transactiondate", "txdate", "datetime", "time", "timestamp"],
-            "description": ["description", "desc", "memo", "note", "details", "narration", "comment"],
+            "date": [
+                "date",
+                "transactiondate",
+                "txdate",
+                "datetime",
+                "time",
+                "timestamp",
+            ],
+            "description": [
+                "description",
+                "desc",
+                "memo",
+                "note",
+                "details",
+                "narration",
+                "comment",
+            ],
             "amount": ["amount", "amt", "value", "sum", "total", "transactionamount"],
-            "balance": ["balance", "bal", "runningbalance", "accountbalance", "newbalance"],
-            "transaction_type": ["type", "transactiontype", "txntype", "category", "transactiontype"],
-            "account_number": ["account", "accountnumber", "accno", "accountid", "accountnumber"],
+            "balance": [
+                "balance",
+                "bal",
+                "runningbalance",
+                "accountbalance",
+                "newbalance",
+            ],
+            "transaction_type": [
+                "type",
+                "transactiontype",
+                "txntype",
+                "category",
+                "transactiontype",
+            ],
+            "account_number": [
+                "account",
+                "accountnumber",
+                "accno",
+                "accountid",
+                "accountnumber",
+            ],
             "currency": ["currency", "curr", "ccy", "currencycode"],
             "country_code": ["country", "countrycode", "cc", "country"],
             "channel": ["channel", "method", "source", "medium", "paymentmethod"],
-            "reference": ["reference", "ref", "id", "transactionid", "txid", "reference"],
+            "reference": [
+                "reference",
+                "ref",
+                "id",
+                "transactionid",
+                "txid",
+                "reference",
+            ],
         }
 
         # Create the actual mapping
@@ -203,7 +264,7 @@ class GenericJsonParser(Parser):
             return None
 
         # If it's already a Decimal or number
-        if isinstance(amount_value, (int, float, Decimal)):
+        if isinstance(amount_value, int | float | Decimal):
             return Decimal(str(amount_value))
 
         # Convert to string and clean

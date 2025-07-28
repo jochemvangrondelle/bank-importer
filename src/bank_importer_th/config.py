@@ -29,13 +29,14 @@ class ConfigManager:
     def _get_default_config(self) -> dict:
         """Get default configuration."""
         return {
+            "app": {"timezone": "Asia/Bangkok"},
             "database": {"url": "sqlite:///bank_importer.db"},
             "accounts": [
                 {
                     "name": "krungsri_main",
                     "parser": "krungsri_text",
                     "file_pattern": "*.txt",
-                    "file_path": "data/raw",
+                    "file_path": "data/in",
                     "account_number": "XXX-1-32483-X",
                     "account_name": "MR. JOCHEM GRONDELLE",
                     "bank_name": "Krungsri Bank",
@@ -73,4 +74,12 @@ class ConfigManager:
 
     def get_enabled_targets(self) -> list[dict[str, Any]]:
         """Get all enabled targets."""
-        return [target for target in self.config.get("targets", []) if target.get("enabled", False)]
+        return [
+            target
+            for target in self.config.get("targets", [])
+            if target.get("enabled", False)
+        ]
+
+    def get_timezone(self) -> str:
+        """Get timezone from configuration."""
+        return self.config.get("app", {}).get("timezone", "Asia/Bangkok")

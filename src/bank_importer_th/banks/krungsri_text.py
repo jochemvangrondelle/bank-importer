@@ -6,6 +6,8 @@ from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 
+import pytz
+
 from ..interfaces.parser import Parser
 from ..models.transaction import Transaction
 
@@ -15,17 +17,28 @@ class KrungsriTextParser(Parser):
 
     def can_parse(self, file_path: Path) -> bool:
         """Check if this parser can handle the given file."""
+        if not file_path.exists():
+            raise ValueError("File does not exist")
+
+        if not file_path.is_file():
+            raise ValueError("Path is not a file")
+
         try:
-            with open(file_path, encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 first_line = f.readline().strip()
                 # Check for Krungsri header pattern
-                return "Date/Time Transaction Withdrawal/Deposit Outstanding Balance Channel Description" in first_line
+                return (
+                    "Date/Time Transaction Withdrawal/Deposit Outstanding Balance Channel Description"
+                    in first_line
+                )
         except (UnicodeDecodeError, FileNotFoundError):
             return False
 
-    def parse_file(self, file_path: Path, account_config: dict) -> Iterator[Transaction]:
+    def parse_file(
+        self, file_path: Path, account_config: dict, config_manager=None
+    ) -> Iterator[Transaction]:
         """Parse Krungsri text file and yield transactions."""
-        with open(file_path, encoding='utf-8') as f:
+        with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
 
         # Skip header line
@@ -35,7 +48,9 @@ class KrungsriTextParser(Parser):
                 continue
 
             try:
-                transaction = self._parse_line(line, account_config, str(file_path))
+                transaction = self._parse_line(
+                    line, account_config, str(file_path), config_manager
+                )
                 if transaction:
                     yield transaction
             except Exception as e:
@@ -43,18 +58,20 @@ class KrungsriTextParser(Parser):
                 print(f"Error parsing line: {line[:50]}... - {e}")
                 continue
 
-    def _parse_line(self, line: str, account_config: dict, source_file: str) -> Transaction:
+    def _parse_line(
+        self, line: str, account_config: dict, source_file: str, config_manager=None
+    ) -> Transaction:
         """Parse a single transaction line."""
         # Use regex to find amount and balance patterns (numbers with commas and decimals)
-        amount_pattern = r'([0-9,]+\.\d{2})'
+        amount_pattern = r"([0-9,]+\.\d{2})"
         matches = list(re.finditer(amount_pattern, line))
 
         if len(matches) < 2:
-            raise ValueError(f"Could not find amount and balance in line: {line}")
+            raise ValueError("Could not find amount and balance in line")
 
         # First match is amount, second is balance
-        amount_str = matches[0].group(1).replace(',', '')
-        balance_str = matches[1].group(1).replace(',', '')
+        amount_str = matches[0].group(1).replace(",", "")
+        balance_str = matches[1].group(1).replace(",", "")
 
         amount = Decimal(amount_str)
         balance = Decimal(balance_str)
@@ -62,10 +79,16 @@ class KrungsriTextParser(Parser):
         # Parse date and time (first two parts)
         parts = line.split()
         if len(parts) < 2:
-            raise ValueError(f"Invalid line format: {line}")
+            raise ValueError("Invalid line format")
 
         date_str = f"{parts[0]} {parts[1]}"
-        date = datetime.strptime(date_str, "%d/%m/%Y %H:%M:%S")
+        # Parse as naive datetime first, then make it timezone aware
+        naive_date = datetime.strptime(date_str, "%d/%m/%Y %H:%M:%S")
+        timezone_str = "Asia/Bangkok"  # Default fallback
+        if config_manager:
+            timezone_str = config_manager.get_timezone()
+        tz = pytz.timezone(timezone_str)
+        date = tz.localize(naive_date)
 
         # Find transaction type - it's everything between time and first amount
         time_end = line.find(parts[1]) + len(parts[1])
@@ -82,9 +105,15 @@ class KrungsriTextParser(Parser):
 
         if remaining:
             remaining_parts = remaining.split()
-            if remaining_parts and remaining_parts[0].isupper() and len(remaining_parts[0]) <= 10:
+            if (
+                remaining_parts
+                and remaining_parts[0].isupper()
+                and len(remaining_parts[0]) <= 10
+            ):
                 channel = remaining_parts[0]
-                description = ' '.join(remaining_parts[1:]) if len(remaining_parts) > 1 else ""
+                description = (
+                    " ".join(remaining_parts[1:]) if len(remaining_parts) > 1 else ""
+                )
             else:
                 description = remaining
 

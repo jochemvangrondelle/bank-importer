@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pdfplumber
+import pytz
 
 from ..interfaces.parser import Parser
 from ..models.transaction import Transaction
@@ -18,6 +19,13 @@ class KrungsriPdfParser(Parser):
 
     def can_parse(self, file_path: Path) -> bool:
         """Check if this parser can handle the given file."""
+        # Check if file exists and is a file (not directory)
+        if not file_path.exists():
+            raise ValueError(f"File does not exist: {file_path}")
+        if not file_path.is_file():
+            raise ValueError(f"Path is not a file: {file_path}")
+
+        # Check file extension
         if file_path.suffix.lower() != ".pdf":
             return False
 
@@ -25,7 +33,9 @@ class KrungsriPdfParser(Parser):
         # The actual password validation will happen in parse_file
         return True
 
-    def parse_file(self, file_path: Path, account_config: dict[str, Any]) -> Iterator[Transaction]:
+    def parse_file(
+        self, file_path: Path, account_config: dict[str, Any], config_manager=None
+    ) -> Iterator[Transaction]:
         """Parse Krungsri PDF statement and yield Transaction objects."""
         # Get password from account configuration
         password = account_config.get("password")
@@ -39,7 +49,7 @@ class KrungsriPdfParser(Parser):
             with pdfplumber.open(file_path, password=password) as pdf:
                 # Verify it's a Krungsri PDF by checking content
                 if len(pdf.pages) == 0:
-                    raise ValueError(f"PDF file {file_path} has no pages")
+                    raise ValueError("PDF file has no pages")
 
                 # Extract text from first page to check for Krungsri indicators
                 first_page = pdf.pages[0]
@@ -54,7 +64,9 @@ class KrungsriPdfParser(Parser):
                 ]
 
                 if not any(indicator in text for indicator in krungsri_indicators):
-                    raise ValueError(f"PDF file {file_path} does not appear to be a Krungsri bank statement")
+                    raise ValueError(
+                        "PDF file does not appear to be a Krungsri bank statement"
+                    )
 
                 # Process all pages
                 for page in pdf.pages:
@@ -64,7 +76,9 @@ class KrungsriPdfParser(Parser):
                         continue
 
                     # Parse transactions from the text
-                    yield from self._parse_transactions_from_text(text, account_config, file_path)
+                    yield from self._parse_transactions_from_text(
+                        text, account_config, file_path
+                    )
 
         except Exception as e:
             if (
@@ -75,8 +89,8 @@ class KrungsriPdfParser(Parser):
             ):
                 raise ValueError(
                     f"Incorrect password for PDF file {file_path}. Please check the password in account configuration."
-                )
-            raise ValueError(f"Error parsing PDF file {file_path}: {e}") from e
+                ) from None
+            raise ValueError("Error parsing PDF file") from e
 
     def _parse_transactions_from_text(
         self, text: str, account_config: dict[str, Any], file_path: Path
@@ -107,13 +121,19 @@ class KrungsriPdfParser(Parser):
             ):
                 continue
 
-            if in_transaction_section and line.strip() and self._is_transaction_line(line):
+            if (
+                in_transaction_section
+                and line.strip()
+                and self._is_transaction_line(line)
+            ):
                 transaction_lines.append(line)
 
         # Parse each transaction line
         for line in transaction_lines:
             try:
-                transaction = self._parse_transaction_line(line, account_config, file_path)
+                transaction = self._parse_transaction_line(
+                    line, account_config, file_path
+                )
                 if transaction:
                     yield transaction
             except Exception as e:
@@ -127,7 +147,9 @@ class KrungsriPdfParser(Parser):
         date_pattern = r"^\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2}"
         return bool(re.match(date_pattern, line.strip()))
 
-    def _parse_transaction_line(self, line: str, account_config: dict[str, Any], file_path: Path) -> Transaction | None:
+    def _parse_transaction_line(
+        self, line: str, account_config: dict[str, Any], file_path: Path
+    ) -> Transaction | None:
         """Parse a single transaction line."""
         # Remove extra whitespace and normalize
         line = line.strip()
@@ -143,7 +165,11 @@ class KrungsriPdfParser(Parser):
         try:
             # Extract date and time
             date_str = f"{parts[0]} {parts[1]}"
-            date = datetime.strptime(date_str, "%d/%m/%Y %H:%M:%S")
+            # Parse as naive datetime first, then make it timezone aware
+            naive_date = datetime.strptime(date_str, "%d/%m/%Y %H:%M:%S")
+            timezone_str = "Asia/Bangkok"  # Default fallback
+            tz = pytz.timezone(timezone_str)
+            date = tz.localize(naive_date)
 
             # Find the amount and balance
             # Look for patterns like "5,000.00" or "1,577.18"
@@ -180,7 +206,9 @@ class KrungsriPdfParser(Parser):
                 channel, description = None, ""
             else:
                 # Split description into channel and description
-                channel, description = self._extract_channel_and_description(description_part)
+                channel, description = self._extract_channel_and_description(
+                    description_part
+                )
 
             # Create transaction object
             return Transaction(
@@ -248,7 +276,9 @@ class KrungsriPdfParser(Parser):
         # Determine if it's a credit or debit (same logic as text parser)
         return not ("Deposit" in transaction_type or "Interest" in transaction_type)
 
-    def _extract_channel_and_description(self, description_part: str) -> tuple[str | None, str]:
+    def _extract_channel_and_description(
+        self, description_part: str
+    ) -> tuple[str | None, str]:
         """Extract channel and description from the description part."""
         if not description_part:
             return None, ""

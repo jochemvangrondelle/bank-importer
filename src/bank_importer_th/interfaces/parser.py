@@ -11,7 +11,9 @@ class Parser(ABC):
     """Abstract base class for bank statement parsers."""
 
     @abstractmethod
-    def parse_file(self, file_path: Path, account_config: dict) -> Iterator[Transaction]:
+    def parse_file(
+        self, file_path: Path, account_config: dict, config_manager=None
+    ) -> Iterator[Transaction]:
         """Parse a bank statement file and yield transactions."""
         pass
 

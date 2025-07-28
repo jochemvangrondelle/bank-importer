@@ -8,10 +8,10 @@ from .krungsri_text import KrungsriTextParser
 from .scb_pdf import ScbPdfParser
 
 __all__ = [
-    "KrungsriTextParser",
-    "KrungsriPdfParser",
-    "ScbPdfParser",
     "GenericCsvParser",
-    "GenericJsonParser",
     "GenericFixedWidthParser",
+    "GenericJsonParser",
+    "KrungsriPdfParser",
+    "KrungsriTextParser",
+    "ScbPdfParser",
 ]

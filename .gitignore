@@ -65,6 +65,11 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Bank Importer specific
+*.db
+translation_cache.json
+config.toml
+
 # Flask stuff:
 instance/
 .webassets-cache
@@ -138,5 +143,25 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-**/data/**
+# Database files
 *.db
+bank_importer.db
+
+# Configuration files with personal data
+config.toml
+
+# Data directories (but keep .gitkeep files)
+data/**
+!data/.gitkeep
+!data/in/Krunsgri/.gitkeep
+!data/out/SCB/.gitkeep
+
+# Log files
+*.log
+
+# Cache files
+translation_cache.json
+
+# Temporary files
+*.tmp
+*.temp
