@@ -167,3 +167,4 @@ translation_cache.json
 *.temp
 config.toml
 .DS_Store
+src/submodules/import-configurations/
