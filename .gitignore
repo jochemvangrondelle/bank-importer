@@ -166,3 +166,4 @@ translation_cache.json
 *.tmp
 *.temp
 config.toml
+.DS_Store

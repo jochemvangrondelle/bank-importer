@@ -9,6 +9,7 @@ from .logging_config import get_logger
 from .models.database import DatabaseManager
 from .targets.csv_target import CsvTarget
 from .targets.yaml_target import YamlTarget
+from .targets.firefly_target import FireflyTarget
 
 
 class TargetManager:
@@ -39,6 +40,9 @@ class TargetManager:
 
         # Initialize YAML target
         self.targets["yaml"] = YamlTarget(output_dir=output_dir)
+
+        # Initialize Firefly-III target
+        self.targets["firefly"] = FireflyTarget(output_dir=output_dir)
 
     def get_target(self, target_name: str) -> Target | None:
         """Get a target by name."""
