@@ -121,19 +121,116 @@ cp config-example.toml config.toml
 # Edit config.toml with your account details
 ```
 
-#### Option 2: Docker Installation (Recommended for Production)
+#### Option 3: Docker Installation (Recommended for Production)
+
+##### Quick Start with Pre-built Images
 
 ```bash
-# Clone the repository
-git clone https://gitea.example.com/jochemvangrondelle/bank-importer-th.git
-cd bank-importer-th
+# Pull stable release from Harbor registry (recommended for production)
+docker pull reg.jochempiya.org/jochem/bank-importer-th:stable
 
-# Build the Docker image
-docker build -t bank-importer-th .
+# Or pull latest beta for testing
+docker pull reg.jochempiya.org/jochem/bank-importer-th:latest
 
-# Or use docker-compose (recommended)
-docker-compose build
+# Run the container with help
+docker run --rm reg.jochempiya.org/jochem/bank-importer-th:stable --help
+
+# Run with actual commands (mount your data directories)
+docker run --rm \
+  -v $(pwd)/data/in:/app/data/in:ro \
+  -v $(pwd)/data/out:/app/data/out \
+  -v $(pwd)/logs:/app/logs \
+  -v $(pwd)/config.toml:/app/config.toml:ro \
+  reg.jochempiya.org/jochem/bank-importer-th:stable \
+  bank-importer-th import-files data/in/
 ```
+
+##### Using Docker Compose (Recommended)
+
+```bash
+# Uses pre-built image from Harbor registry by default
+docker-compose run --rm bank-importer --help
+
+# Run actual commands
+docker-compose run --rm bank-importer bank-importer-th import-files data/in/
+docker-compose run --rm bank-importer bank-importer-th export --target csv
+docker-compose run --rm bank-importer bank-importer-th status
+
+# Build locally when needed
+docker-compose build
+docker-compose up --build
+```
+
+##### Building Docker Images Locally
+
+```bash
+# Build for local platform (AMD64/ARM64)
+make docker-build
+
+# Build for multiple platforms (AMD64 + ARM64)
+make docker-build-multi
+
+# Build and push to Harbor registry
+make docker-build-push
+
+# Build for specific platform
+make docker-build-arm64          # ARM64 only
+make docker-build-amd64          # AMD64 only
+
+# Using the build script directly
+./scripts/docker-build.sh --local                    # Local build
+./scripts/docker-build.sh --multi-platform --push    # Multi-platform + push
+./scripts/docker-build.sh --platform linux/arm64     # Specific platform
+```
+
+##### Docker Image Tags
+
+- **`stable`** - Production-ready stable releases (recommended for production)
+- **`latest`** - Latest beta/pre-release versions (for testing)
+- **`v1.2.3`** - Specific version tags
+
+##### Volume Mounts
+
+The Docker container expects these volume mounts:
+
+- **`/app/data/in`** - Input directory (bank statements) - read-only
+- **`/app/data/out`** - Output directory (exports) - read-write
+- **`/app/logs`** - Logs directory - read-write
+- **`/app/config.toml`** - Configuration file - read-only
+
+##### Environment Variables
+
+- **`APP_VERSION`** - Application version (auto-detected from package)
+
+##### Smart Entrypoint
+
+The container includes a smart entrypoint that handles various command patterns:
+
+```bash
+# These all work the same way:
+docker run --rm <image> --help
+docker run --rm <image> bank-importer-th --help
+docker run --rm <image> import-files data/in/
+docker run --rm <image> bank-importer-th import-files data/in/
+```
+
+##### Docker Image Optimization
+
+The Docker image is optimized for production use:
+
+- **Multi-stage build** with shared base layer for maximum efficiency
+- **uv-based** Python package management for faster builds and smaller images
+- **Python 3.13** with optimized runtime
+- **Non-root user** (appuser) for security
+- **Health check** included for container monitoring
+- **Cross-platform support** (AMD64/ARM64) via Docker Buildx
+- **Smart layer caching** for faster rebuilds
+
+**Image layers:**
+
+- **Base stage**: Common runtime dependencies (`libmagic1`), user setup, working directory
+- **Builder stage**: Build dependencies (`build-essential`), application building
+- **Production stage**: Runtime-only, minimal footprint
 
 ### Basic Usage
 

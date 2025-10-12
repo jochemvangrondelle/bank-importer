@@ -320,6 +320,13 @@ changelog_ignore_merge_commits = true
 changelog_ignore_commits_with = ["skip ci", "ci skip", "no ci", "skip changelog", "changelog skip"]
 changelog_ignore_types = ["docs", "style", "test", "build", "ci", "chore"]
 
+    # Tag configuration for different branches
+    [tool.semantic_release.branches]
+    main    = { name = "latest", prerelease = false }
+    develop = { name = "develop", prerelease = true, prerelease_token = "alpha" }
+    beta    = { name = "beta", prerelease = true, prerelease_token = "beta" }
+    stable  = { name = "stable", prerelease = false }
+
     # Gitea-specific settings
     [tool.semantic_release.gitea]
     domain = "git.jochempiya.org"

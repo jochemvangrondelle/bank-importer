@@ -25,13 +25,23 @@ version: ## Show current version
 	@uv run python -c "from src.bank_importer_th import __version__; print(__version__)"
 
 # Docker
-docker-build: ## Build Docker image
-	docker build --target production -t bank-importer-th:$(shell uv run python -c "from src.bank_importer_th import __version__; print(__version__)") .
-	docker tag bank-importer-th:$(shell uv run python -c "from src.bank_importer_th import __version__; print(__version__)") bank-importer-th:latest
+docker-build: ## Build Docker image (Python 3.13) for local platform
+	./scripts/docker-build.sh --local
 
-docker-push: ## Push Docker image to registry
-	docker push bank-importer-th:$(shell uv run python -c "from src.bank_importer_th import __version__; print(__version__)")
-	docker push bank-importer-th:latest
+docker-build-multi: ## Build Docker image for multiple platforms (amd64, arm64)
+	./scripts/docker-build.sh --multi-platform
+
+docker-build-push: ## Build and push Docker image to Harbor registry
+	./scripts/docker-build.sh --multi-platform --push
+
+docker-build-arm64: ## Build Docker image for ARM64 platform
+	./scripts/docker-build.sh --platform linux/arm64
+
+docker-build-amd64: ## Build Docker image for AMD64 platform
+	./scripts/docker-build.sh --platform linux/amd64
+
+docker-push: ## Push Docker image to registry (deprecated, use docker-build-push)
+	@echo "Use 'make docker-build-push' instead"
 
 # Semantic Release
 semantic-release: ## Run semantic release (version, changelog, publish)

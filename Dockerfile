@@ -1,30 +1,7 @@
-# Multi-stage build for smaller image size
-FROM python:3.12-slim as builder
+# Base stage with common runtime dependencies
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS base
 
-# Install system dependencies for building
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install uv
-RUN pip install --no-cache-dir uv
-
-# Set working directory
-WORKDIR /app
-
-# Copy uv configuration files
-COPY pyproject.toml uv.lock ./
-
-# Copy source code and submodules
-COPY src/ ./src/
-
-# Install dependencies and application
-RUN uv sync --frozen --no-dev && uv pip install -e .
-
-# Production stage
-FROM python:3.12-slim as production
-
-# Install only runtime dependencies
+# Install common runtime dependencies
 RUN apt-get update && apt-get install -y \
     libmagic1 \
     && rm -rf /var/lib/apt/lists/* \
@@ -36,6 +13,36 @@ RUN useradd -m -u 1000 appuser
 # Set working directory
 WORKDIR /app
 
+# Add virtual environment to PATH
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Builder stage - inherits from base and adds build dependencies
+FROM base AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy source code and submodules first (needed for local dependencies)
+COPY src/ ./src/
+
+# Copy uv configuration files and README (needed for package metadata)
+COPY pyproject.toml uv.lock README.md ./
+
+# Install dependencies
+RUN uv sync --frozen --no-dev
+
+# Install application in editable mode
+RUN uv pip install -e .
+
+# Copy entrypoint script and make it executable
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Production stage - inherits from base
+FROM base AS production
+
 # Copy virtual environment from builder
 COPY --from=builder /app/.venv /app/.venv
 
@@ -43,32 +50,26 @@ COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
 COPY config-example.toml ./
 
-# Create data directories
+# Copy entrypoint script from builder
+COPY --from=builder /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Create data directories and set ownership
 RUN mkdir -p /app/data/in /app/data/out /app/logs && \
     chown -R appuser:appuser /app
 
 # Switch to app user
 USER appuser
 
-# Add virtual environment to PATH
-ENV PATH="/app/.venv/bin:$PATH"
-
 # Set version from package
 ARG VERSION
-ENV APP_VERSION=${VERSION:-$(python -c "from bank_importer_th import __version__; print(__version__)")}
+ENV APP_VERSION=$VERSION
 
 # Set default volumes
 VOLUME ["/app/data/in", "/app/data/out", "/app/logs"]
-
-# Set default working directory
-WORKDIR /app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD bank-importer-th --version || exit 1
 
 # Default command
-ENTRYPOINT ["bank-importer-th"]
-
-# Default arguments (show help)
-CMD ["--help"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

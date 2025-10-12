@@ -2,11 +2,22 @@ version: "3.8"
 
 services:
   bank-importer:
+    # Use pre-built image from Harbor registry by default
+    image: reg.jochempiya.org/jochem/bank-importer-th:${VERSION:-stable}
+
+    # Build configuration (only used with --build flag)
     build:
       context: .
       target: production
       args:
         VERSION: ${VERSION:-latest}
+      tags:
+        - bank-importer-th:${VERSION:-latest}
+        - bank-importer-th:latest
+      platforms:
+        - linux/amd64
+        - linux/arm64
+
     container_name: bank-importer-th
     environment:
       - APP_VERSION=${VERSION:-latest}
@@ -23,3 +34,9 @@ services:
     # docker-compose run --rm bank-importer import-files data/in/
     # docker-compose run --rm bank-importer export --target csv
     # docker-compose run --rm bank-importer status
+    # docker-compose run --rm bank-importer --help
+    # docker-compose run --rm bank-importer version
+    #
+    # Build locally (when needed):
+    # docker-compose build bank-importer
+    # docker-compose up --build bank-importer
