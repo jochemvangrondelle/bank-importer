@@ -33,6 +33,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -43,6 +44,18 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           version: "latest"
+
+      - name: Verify submodules
+        run: |
+          echo "Checking submodules..."
+          ls -la src/submodules/
+          if [ -d "src/submodules/firefly-iii-client" ]; then
+            echo "Firefly III client submodule found"
+            ls -la src/submodules/firefly-iii-client/
+          else
+            echo "ERROR: Firefly III client submodule not found"
+            exit 1
+          fi
 
       - name: Install dependencies
         run: uv sync --dev
@@ -68,6 +81,12 @@ jobs:
           driver-opts: |
             image=moby/buildkit:buildx-stable-1
             network=host
+
+      - name: Login to Harbor Registry
+        run: |
+          echo "${{ secrets.HARBOR_PASSWORD }}" | docker login reg.jochempiya.org \
+            --username "${{ secrets.HARBOR_USER }}" \
+            --password-stdin
 
       - name: Build Docker image (multi-platform)
         run: |
@@ -98,9 +117,3 @@ jobs:
             $TAGS \
             --push \
             .
-
-      - name: Login to Harbor Registry
-        run: |
-          echo "${{ secrets.HARBOR_PASSWORD }}" | docker login reg.jochempiya.org \
-            --username "${{ secrets.HARBOR_USER }}" \
-            --password-stdin
