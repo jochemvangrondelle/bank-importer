@@ -1,7 +1,7 @@
 # Bank Importer Thailand
 
-[![CI](https://github.com/jochemvangrondelle/bank-importer-th/actions/workflows/ci.yml/badge.svg)](https://github.com/jochemvangrondelle/bank-importer-th/actions/workflows/ci.yml)
-[![Release](https://github.com/jochemvangrondelle/bank-importer-th/actions/workflows/release.yml/badge.svg)](https://github.com/jochemvangrondelle/bank-importer-th/actions/workflows/release.yml)
+[![CI](https://gitea.example.com/jochemvangrondelle/bank-importer-th/actions/workflows/ci.yml/badge.svg)](https://gitea.example.com/jochemvangrondelle/bank-importer-th/actions/workflows/ci.yml)
+[![Release](https://gitea.example.com/jochemvangrondelle/bank-importer-th/actions/workflows/release.yml/badge.svg)](https://gitea.example.com/jochemvangrondelle/bank-importer-th/actions/workflows/release.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://opensource.org/licenses/AGPL-3.0)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-available-blue.svg)](https://hub.docker.com/)
@@ -110,7 +110,7 @@ uv add bank-importer-th
 
 ```bash
 # Clone the repository
-git clone https://github.com/jochemvangrondelle/bank-importer-th.git
+git clone https://gitea.example.com/jochemvangrondelle/bank-importer-th.git
 cd bank-importer-th
 
 # Install dependencies
@@ -125,7 +125,7 @@ cp config-example.toml config.toml
 
 ```bash
 # Clone the repository
-git clone https://github.com/jochemvangrondelle/bank-importer-th.git
+git clone https://gitea.example.com/jochemvangrondelle/bank-importer-th.git
 cd bank-importer-th
 
 # Build the Docker image
@@ -425,17 +425,67 @@ Contributions are welcome! The project is designed for extensibility:
 
 ```bash
 # Install development dependencies
-uv sync --extra dev
+uv sync --group dev
 
-# Run tests
+# Setup pre-commit hooks
+make dev-setup
+
+# Run all development checks
+make dev-check
+
+# Or run individual commands
 uv run pytest
-
-# Type checking
 uv run mypy src/
-
-# Code formatting
 uv run ruff format src/
 ```
+
+### Release Process
+
+This project uses [python-semantic-release](https://python-semantic-release.readthedocs.io/) for automated versioning and releases based on conventional commits.
+
+#### Commit Convention
+
+All commits must follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+```bash
+# Examples
+feat: add support for new bank format
+fix: resolve PDF parsing issue
+docs: update installation instructions
+chore: update dependencies
+```
+
+#### Branch Strategy
+
+- **`develop`**: Latest merged changes, continuous integration
+- **`beta`**: Pre-release versions, automatically updated from develop
+- **`stable`**: Production releases, updated from beta when a version is released
+
+#### Making a Release
+
+```bash
+# Interactive commit using commitizen
+make commit
+
+# Manual release (if needed)
+make release
+
+# Check current version
+make version
+```
+
+#### Pre-commit Hooks
+
+Pre-commit hooks enforce:
+
+- Conventional commit message format
+- Code formatting (ruff)
+- Linting (ruff, mypy)
+- File validation (YAML, JSON, TOML)
+
+For detailed information, see [Release Process Documentation](docs/RELEASE_PROCESS.md).
+
+For Gitea-specific setup instructions, see [Gitea Setup Guide](docs/GITEA_SETUP.md).
 
 ### Docker Development
 

@@ -1,6 +1,11 @@
 """Bank Importer - Multi-language financial data processing."""
 
-__version__ = "0.1.0"
+import importlib.metadata
+
+try:
+    __version__ = importlib.metadata.version(__name__)
+except importlib.metadata.PackageNotFoundError:
+    __version__ = "0.0.0"  # Fallback for development mode
 
 from .banks import KrungsriTextParser
 from .config import ConfigManager

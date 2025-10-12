@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial project setup with semantic versioning
 - Pre-commit hooks and code quality tools
+- Support for Thai bank statement parsing (SCB, Krungsri, Amex)
+- Firefly-III integration
+- Multi-language transaction support
 - Basic CI/CD pipeline with Gitea Actions
 
 ### Changed

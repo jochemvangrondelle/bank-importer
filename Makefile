@@ -1,4 +1,4 @@
-.PHONY: help install test lint clean version bump-patch bump-minor bump-major docker-build docker-push
+.PHONY: help install test lint clean version docker-build docker-push release semantic-release
 
 # Default target
 help: ## Show this help message
@@ -24,31 +24,26 @@ clean: ## Clean build artifacts
 version: ## Show current version
 	@uv run python -c "from src.bank_importer_th import __version__; print(__version__)"
 
-bump-patch: ## Bump patch version (0.1.0 -> 0.1.1)
-	bump2version patch
-
-bump-minor: ## Bump minor version (0.1.0 -> 0.2.0)
-	bump2version minor
-
-bump-major: ## Bump major version (0.1.0 -> 1.0.0)
-	bump2version major
-
 # Docker
 docker-build: ## Build Docker image
-	docker build -t bank-importer-th:$(shell cat VERSION) .
-	docker tag bank-importer-th:$(shell cat VERSION) bank-importer-th:latest
+	docker build --target production -t bank-importer-th:$(shell uv run python -c "from src.bank_importer_th import __version__; print(__version__)") .
+	docker tag bank-importer-th:$(shell uv run python -c "from src.bank_importer_th import __version__; print(__version__)") bank-importer-th:latest
 
 docker-push: ## Push Docker image to registry
-	docker push bank-importer-th:$(shell cat VERSION)
+	docker push bank-importer-th:$(shell uv run python -c "from src.bank_importer_th import __version__; print(__version__)")
 	docker push bank-importer-th:latest
 
+# Semantic Release
+semantic-release: ## Run semantic release (version, changelog, publish)
+	uv run semantic-release version
+	uv run semantic-release changelog
+	uv run semantic-release publish
+
 # Release
-release: ## Create a new release (bump patch, build, push)
-	@echo "Creating release for version $(shell cat VERSION)..."
-	$(MAKE) bump-patch
-	$(MAKE) docker-build
-	$(MAKE) docker-push
-	@echo "Release $(shell cat VERSION) created successfully!"
+release: ## Create a new release using semantic-release
+	@echo "Creating release using semantic-release..."
+	$(MAKE) semantic-release
+	@echo "Release created successfully!"
 
 # CI/CD helpers
 ci-test: ## Run tests for CI
@@ -70,3 +65,15 @@ dev-check: ## Run all development checks
 	$(MAKE) lint
 	$(MAKE) test
 	$(MAKE) version
+
+# Commit helpers
+commit: ## Interactive commit using commitizen
+	uv run cz commit
+
+# Pre-commit
+pre-commit: ## Run pre-commit on all files
+	uv run pre-commit run --all-files
+
+# Test Gitea release configuration
+test-gitea-release: ## Test Gitea release configuration
+	./scripts/test-gitea-release.sh

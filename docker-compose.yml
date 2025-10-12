@@ -2,8 +2,14 @@ version: "3.8"
 
 services:
   bank-importer:
-    build: .
+    build:
+      context: .
+      target: production
+      args:
+        VERSION: ${VERSION:-latest}
     container_name: bank-importer-th
+    environment:
+      - APP_VERSION=${VERSION:-latest}
     volumes:
       # Mount input directory (bank statements)
       - ./data/in:/app/data/in:ro
