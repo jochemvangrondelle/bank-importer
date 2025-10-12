@@ -31,12 +31,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Verify uv installation
-        run: uv --version
+        run: |
+          echo "PATH: $PATH"
+          ls -la $HOME/.cargo/bin/
+          uv --version
 
       - name: Install dependencies
         run: uv sync --group dev --python ${{ matrix.python-version }}
@@ -62,9 +65,15 @@ jobs:
           python-version: "3.11"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Verify uv installation
+        run: |
+          echo "PATH: $PATH"
+          ls -la $HOME/.cargo/bin/
+          uv --version
 
       - name: Install tox with tox-uv
         run: uv tool install tox --with tox-uv
@@ -91,9 +100,15 @@ jobs:
           python-version: "3.11"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Verify uv installation
+        run: |
+          echo "PATH: $PATH"
+          ls -la $HOME/.cargo/bin/
+          uv --version
 
       - name: Install dependencies
         run: uv sync --group dev --python 3.11
