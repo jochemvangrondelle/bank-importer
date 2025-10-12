@@ -66,7 +66,7 @@ def coverage(
                 continue
 
             # Group transactions by date
-            date_counts = defaultdict(int)
+            date_counts: dict[str, int] = defaultdict(int)
             dates = []
 
             for tx in transactions:
@@ -74,7 +74,7 @@ def coverage(
                     tx_date = datetime.fromisoformat(
                         tx["date"].replace("Z", "+00:00")
                     ).date()
-                    date_counts[tx_date] += 1
+                    date_counts[str(tx_date)] += 1
                     dates.append(tx_date)
                 except Exception as e:
                     print(

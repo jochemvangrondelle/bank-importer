@@ -36,6 +36,7 @@ wheels = [
 
 [[package]]
 name = "bank-importer-th"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "deep-translator" },
@@ -50,6 +51,7 @@ dependencies = [
     { name = "toml" },
     { name = "typer" },
     { name = "types-toml" },
+    { name = "uv-dynamic-versioning" },
 ]
 
 [package.optional-dependencies]
@@ -87,7 +89,7 @@ dev = [
 requires-dist = [
     { name = "commitizen", marker = "extra == 'dev'", specifier = ">=3.0.0" },
     { name = "deep-translator", specifier = ">=1.11.4" },
-    { name = "firefly-iii-api-client", directory = "src/submodules/firefly-iii-client" },
+    { name = "firefly-iii-api-client", git = "https://github.com/jochemvangrondelle/firefly-iii-client.git" },
     { name = "google-trans", specifier = ">=2.4.0" },
     { name = "googletrans", specifier = ">=4.0.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=0.991" },
@@ -109,6 +111,7 @@ requires-dist = [
     { name = "tox-uv", marker = "extra == 'dev'", specifier = ">=1.11.3" },
     { name = "typer", specifier = ">=0.9.0" },
     { name = "types-toml", specifier = ">=0.10.8.20240310" },
+    { name = "uv-dynamic-versioning" },
 ]
 provides-extras = ["dev"]
 
@@ -562,6 +565,18 @@ wheels = [
 ]
 
 [[package]]
+name = "dunamai"
+version = "1.25.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f1/2f/194d9a34c4d831c6563d2d990720850f0baef9ab60cb4ad8ae0eff6acd34/dunamai-1.25.0.tar.gz", hash = "sha256:a7f8360ea286d3dbaf0b6a1473f9253280ac93d619836ad4514facb70c0719d1", size = 46155, upload-time = "2025-07-04T19:25:56.082Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/36/41/04e2a649058b0713b00d6c9bd22da35618bb157289e05d068e51fddf8d7e/dunamai-1.25.0-py3-none-any.whl", hash = "sha256:7f9dc687dd3256e613b6cc978d9daabfd2bb5deb8adc541fc135ee423ffa98ab", size = 27022, upload-time = "2025-07-04T19:25:54.863Z" },
+]
+
+[[package]]
 name = "execnet"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -582,20 +597,12 @@ wheels = [
 [[package]]
 name = "firefly-iii-api-client"
 version = "6.4.0.0"
-source = { directory = "src/submodules/firefly-iii-client" }
+source = { git = "https://github.com/jochemvangrondelle/firefly-iii-client.git#1b29cdc3dc193524c9db8460ffa6a04be62ae570" }
 dependencies = [
     { name = "pydantic" },
     { name = "python-dateutil" },
     { name = "typing-extensions" },
     { name = "urllib3" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pydantic", specifier = ">=2" },
-    { name = "python-dateutil", specifier = ">=2.8.2" },
-    { name = "typing-extensions", specifier = ">=4.7.1" },
-    { name = "urllib3", specifier = ">=1.25.3,<3.0.0" },
 ]
 
 [[package]]
@@ -702,6 +709,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1d/17/afa56379f94ad0fe8defd37d6eb3f89a25404ffc71d4d848893d270325fc/h2-4.3.0.tar.gz", hash = "sha256:6c59efe4323fa18b47a632221a1888bd7fde6249819beda254aeca909f221bf1", size = 2152026, upload-time = "2025-08-23T18:12:19.778Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/69/b2/119f6e6dcbd96f9069ce9a2665e0146588dc9f88f29549711853645e736a/h2-4.3.0-py3-none-any.whl", hash = "sha256:c438f029a25f7945c69e0ccf0fb951dc3f73a5f6412981daee861431b70e2bdd", size = 61779, upload-time = "2025-08-23T18:12:17.779Z" },
+]
+
+[[package]]
+name = "hatchling"
+version = "1.27.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "pathspec" },
+    { name = "pluggy" },
+    { name = "trove-classifiers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/8a/cc1debe3514da292094f1c3a700e4ca25442489731ef7c0814358816bb03/hatchling-1.27.0.tar.gz", hash = "sha256:971c296d9819abb3811112fc52c7a9751c8d381898f36533bb16f9791e941fd6", size = 54983, upload-time = "2024-12-15T17:08:11.894Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/e7/ae38d7a6dfba0533684e0b2136817d667588ae3ec984c1a4e5df5eb88482/hatchling-1.27.0-py3-none-any.whl", hash = "sha256:d3a2f3567c4f926ea39849cdf924c7e99e6686c9c8e288ae1037c8fa2a5d937b", size = 75794, upload-time = "2024-12-15T17:08:10.364Z" },
 ]
 
 [[package]]
@@ -1761,6 +1783,15 @@ wheels = [
 ]
 
 [[package]]
+name = "trove-classifiers"
+version = "2025.9.11.17"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/9a/778622bc06632529817c3c524c82749a112603ae2bbcf72ee3eb33a2c4f1/trove_classifiers-2025.9.11.17.tar.gz", hash = "sha256:931ca9841a5e9c9408bc2ae67b50d28acf85bef56219b56860876dd1f2d024dd", size = 16975, upload-time = "2025-09-11T17:07:50.97Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/85/a4ff8758c66f1fc32aa5e9a145908394bf9cf1c79ffd1113cfdeb77e74e4/trove_classifiers-2025.9.11.17-py3-none-any.whl", hash = "sha256:5d392f2d244deb1866556457d6f3516792124a23d1c3a463a2e8668a5d1c15dd", size = 14158, upload-time = "2025-09-11T17:07:49.886Z" },
+]
+
+[[package]]
 name = "typer"
 version = "0.19.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1877,6 +1908,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/24/95/1e539dae42d124749faaae22d27e239911e5b1676fedab716434c56aa869/uv-0.9.2-py3-none-win32.whl", hash = "sha256:ed2ce9a58e3e9df51387907163da649129e71b75c98ab7fec1d23c57640c62ae", size = 19376589, upload-time = "2025-10-10T19:01:58.794Z" },
     { url = "https://files.pythonhosted.org/packages/27/33/f1b73f9d019dcfe83fb545e5d0d080952300248d547433bb975ad7fd3331/uv-0.9.2-py3-none-win_amd64.whl", hash = "sha256:27815edaa0be4f6346b24f3b6a4389f7747ae98538f4e2e8946090bb959389cc", size = 21359072, upload-time = "2025-10-10T19:02:01.13Z" },
     { url = "https://files.pythonhosted.org/packages/39/aa/e23b96625a51266f2218cf0e0751ada65f138a57910fc0810cdd9d28d76f/uv-0.9.2-py3-none-win_arm64.whl", hash = "sha256:86e8fc3424266c9afca829d3936e91b677027658a253c7bb2a299fafd97aab0d", size = 19810880, upload-time = "2025-10-10T19:02:03.868Z" },
+]
+
+[[package]]
+name = "uv-dynamic-versioning"
+version = "0.11.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dunamai" },
+    { name = "hatchling" },
+    { name = "jinja2" },
+    { name = "tomlkit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9b/22/c92035270279904bc94680f4715a02a8d40f90633bc624a6082209655a15/uv_dynamic_versioning-0.11.2.tar.gz", hash = "sha256:4c785ea02e00b93896d015fd3613c451735af1715a7f5f52e8e4e1d76e6ec3c5", size = 40402, upload-time = "2025-09-28T04:24:02.249Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/22/276099d5a4b2cc7a4310a0160f4f8a7ed0c2a67adaeefec3862bd55df303/uv_dynamic_versioning-0.11.2-py3-none-any.whl", hash = "sha256:563ab4b7a93904eb8fb8fd9f2959dad853d62baa71f3cdb0233acf8a749d512f", size = 11093, upload-time = "2025-09-28T04:24:00.869Z" },
 ]
 
 [[package]]

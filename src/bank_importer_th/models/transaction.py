@@ -94,7 +94,10 @@ class Transaction(SQLModel, table=True):
         if self.raw_json is None:
             return None
         try:
-            return json.loads(self.raw_json)
+            result = json.loads(self.raw_json)
+            if isinstance(result, dict):
+                return result
+            return None
         except (json.JSONDecodeError, TypeError):
             return None
 

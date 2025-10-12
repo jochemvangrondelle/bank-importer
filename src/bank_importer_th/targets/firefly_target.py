@@ -344,16 +344,15 @@ class FireflyTarget(Target):
 
         # Extract Amex-specific fields from raw_json if available
         amex_fields: dict[str, str] = {}
-        if transaction.raw_json and isinstance(transaction.raw_json, dict):
+        raw_json_dict = transaction.get_raw_json_dict()
+        if raw_json_dict:
             amex_fields = {
-                "card_member": transaction.raw_json.get("card_member", ""),
-                "appears_on_statement": transaction.raw_json.get(
-                    "appears_on_statement", ""
-                ),
-                "address": transaction.raw_json.get("address", ""),
-                "city_state": transaction.raw_json.get("city_state", ""),
-                "zip_code": transaction.raw_json.get("zip_code", ""),
-                "extended_details": transaction.raw_json.get("extended_details", ""),
+                "card_member": raw_json_dict.get("card_member", ""),
+                "appears_on_statement": raw_json_dict.get("appears_on_statement", ""),
+                "address": raw_json_dict.get("address", ""),
+                "city_state": raw_json_dict.get("city_state", ""),
+                "zip_code": raw_json_dict.get("zip_code", ""),
+                "extended_details": raw_json_dict.get("extended_details", ""),
             }
         else:
             amex_fields = {
@@ -475,10 +474,14 @@ class FireflyTarget(Target):
 
         account_number = transaction.account_number or ""
         date_str = transaction.date.strftime("%Y%m%d")
-        transaction_id = transaction.unique_id or str(transaction.id or "")
+        transaction_id = transaction.unique_id or str(transaction.id or 0)
 
-        return external_id_format.format(
-            account_number=account_number, date=date_str, transaction_id=transaction_id
+        return str(
+            external_id_format.format(
+                account_number=account_number,
+                date=date_str,
+                transaction_id=transaction_id,
+            )
         )
 
     def _generate_import_config(

@@ -1,5 +1,7 @@
 """Export multi command for the bank importer CLI."""
 
+from typing import Any
+
 from ...cli_parameters import (
     CONFIG_FILE_PARAM,
     DRY_RUN_PARAM,
@@ -72,7 +74,7 @@ def export_multi(
         logger.info("✅ Multi-file export processing completed successfully")
 
 
-def _log_export_result(result) -> None:
+def _log_export_result(result: Any) -> None:
     """Log details for an export result."""
     target_name = result.target_name
     status = "SUCCESS" if result.success else "FAILED"

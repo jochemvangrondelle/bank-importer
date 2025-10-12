@@ -19,7 +19,7 @@ from .interfaces.parser import Parser
 class ParserDetector:
     """Detect the best parser for a given file using parser attributes and content validation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize parser detector with all available parsers."""
         self.parsers = {
             "amex_th_csv": AmexThCsvParser(),

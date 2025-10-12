@@ -85,7 +85,7 @@ ci-lint: ## Run linting for CI
 	uv run --python 3.11 mypy src/
 
 ci-build: ## Build for CI
-	uv run --python 3.11 python -m build
+	uv build
 
 # Development workflow
 dev-setup: ## Setup development environment

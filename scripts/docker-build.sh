@@ -67,7 +67,7 @@ setup_buildx() {
 # Function to get version from package
 get_version() {
     if command -v uv >/dev/null 2>&1; then
-        uv run --python 3.11 python -c "from src.bank_importer_th import __version__; print(__version__)" 2>/dev/null || echo "latest"
+        uv run --python 3.11 python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])" 2>/dev/null || echo "latest"
     else
         echo "latest"
     fi

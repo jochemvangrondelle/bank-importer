@@ -1,6 +1,6 @@
 [project]
 name = "bank-importer-th"
-dynamic = ["version"]
+version = "0.1.0"
 description = "A Python application that parses Thai bank export PDFs and exports transactions to CSV format suitable for import into Firefly-III"
 authors = [{ name = "Jochem van Grondelle", email = "jochem@vangrondelle.net" }]
 readme = "README.md"
@@ -19,10 +19,8 @@ dependencies = [
     "pyyaml>=6.0.2",
     "pytz>=2024.1",
     "deep-translator>=1.11.4",
-    "firefly-iii-api-client",
-    "click>=8.1.8",
-    "prompt-toolkit>=3.0.52",
-    "commitizen>=4.8.3",
+    "uv-dynamic-versioning",
+    "firefly-iii-api-client @ git+https://github.com/jochemvangrondelle/firefly-iii-client.git",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -46,50 +44,55 @@ classifiers = [
     Repository    = "https://github.com/jochemvangrondelle/bank-importer-th"
     Documentation = "https://jochemvangrondelle.github.io/bank-importer-th/"
 
+
+    [project.optional-dependencies]
+    dev = [
+        "pytest>=7.2.0",
+        "pytest-xdist>=3.0.0",
+        "pre-commit>=2.20.0",
+        "tox-uv>=1.11.3",
+        "mypy>=0.991",
+        "pytest-cov>=4.0.0",
+        "ruff>=0.11.5",
+        "pyright>=1.1.0",
+        "pytest-mock>=3.10.0",
+        "pytest-asyncio>=0.21.0",
+        "python-semantic-release>=8.0.0",
+        "commitizen>=3.0.0",
+    ]
+
+
+    [project.scripts]
+    bank-importer-th = "bank_importer_th.cli_main:app"
+
+[build-system]
+requires      = ["uv_build>=0.9.2,<0.10.0", "uv-dynamic-versioning"]
+build-backend = "uv_build"
+
+[tool.uv-dynamic-versioning]
+fallback-version = "0.0.0"
+
+
 [dependency-groups]
 dev = [
+    "python-semantic-release>=8.0.0",
+    "commitizen>=3.0.0",
     "pytest>=8.4.1",
     "pytest-xdist>=3.0.0",
     "pytest-cov>=6.2.1",
     "ruff>=0.12.4",
     "mypy>=1.18.2",
-    "pre-commit>=2.20.0",
-    "tox-uv>=1.11.3",
-    "pyright>=1.1.0",
-    "pytest-mock>=3.10.0",
-    "pytest-asyncio>=0.21.0",
-    "python-semantic-release>=8.0.0",
-    "commitizen>=3.0.0",
     "types-requests>=2.32.4.20250913",
     "types-pyyaml>=6.0.12.20250915",
     "types-pytz>=2025.2.0.20250809",
     "types-setuptools>=80.9.0.20250822",
 ]
 
-    [project.scripts]
-    bank-importer-th = "bank_importer_th.cli_main:app"
-
-[build-system]
-requires      = ["hatchling", "uv-dynamic-versioning"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-source = "uv-dynamic-versioning"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/bank_importer_th"]
-
-[tool.uv.sources]
-firefly-iii-api-client = { git = "https://github.com/jochemvangrondelle/firefly-iii-client.git" }
-
-[tool.uv-dynamic-versioning]
-fallback-version = "0.0.0"
 [tool.mypy]
 exclude = [
-    "src/submodules/firefly-iii-client/build",
-    "src/submodules/firefly-iii-client/firefly_iii_client/*",
-    "src/submodules/import-configurations",
-    "src/submodules/firefly-iii-client/test/*",
+    "packages/firefly-iii-client/build",
+    "packages/firefly-iii-client/firefly_iii_client/*",
+    "packages/firefly-iii-client/test/*",
 ]
 disallow_untyped_defs = true
 disallow_any_unimported = true
@@ -125,9 +128,8 @@ exclude = [
     "tests",
     "venv",
     ".venv",
-    "src/submodules/firefly-iii-client/build",
-    "src/submodules/firefly-iii-client/firefly_iii_client",
-    "src/submodules/import-configurations",
+    "packages/firefly-iii-client/build",
+    "packages/firefly-iii-client/firefly_iii_client",
 ]
 typeCheckingMode = "strict"
 useLibraryCodeForTypes = true
@@ -167,7 +169,7 @@ markers = [
 [tool.ruff]
 target-version = "py311"
 line-length    = 88
-exclude        = ["__pycache__", ".git", ".venv", "venv", ".env", "src/submodules"]
+exclude        = ["__pycache__", ".git", ".venv", "venv", ".env", "packages"]
 
     [tool.ruff.lint]
     select = [
@@ -188,17 +190,28 @@ exclude        = ["__pycache__", ".git", ".venv", "venv", ".env", "src/submodule
     ]
 
         [tool.ruff.lint.per-file-ignores]
-        "__init__.py" = ["F401"]
+        "__init__.py"                                         = ["F401"]
+        "packages/firefly-iii-client/firefly_iii_client/**/*" = ["E501", "F401", "F403", "F405"]
 
 [tool.black]
 target-version = ['py311']
-line-length    = 88
+line-length = 88
+exclude = '''
+/(
+  packages/firefly-iii-client/test
+)/
+'''
 
 [tool.isort]
 profile           = "black"
 multi_line_output = 3
 target_version    = "py311"
 line_length       = 88
+skip_glob         = ["packages/firefly-iii-client/test/*"]
+
+[tool.coverage.run]
+source = ["src"]
+omit   = ["*/tests/*", "*/test_*.py"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -218,22 +231,17 @@ exclude_lines = [
     "logger\\.debug\\(",
     "logging\\.debug\\(",
 ]
-omit = ["*/tests/*", "*/test_*.py"]
-
-[tool.coverage.run]
-source = ["src"]
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
-version_variable = "src/bank_importer_th/__init__.py:__version__"
 build_command = "uv build"
 dist_path = "dist"
 upload_to_vcs_release = true
 upload_to_pypi = false
 upload_to_release = true
 hvcs = "gitea"
-remote = "origin"
-major_on_zero = true
+remote = { name = "origin" }
+major_on_zero = false
 prerelease_tag = "beta"
 prerelease = true
 prerelease_token = "beta"

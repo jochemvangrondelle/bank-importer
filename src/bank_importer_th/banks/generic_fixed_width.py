@@ -6,7 +6,10 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..config import ConfigManager
 
 from ..interfaces.parser import Parser
 from ..models.transaction import Transaction
@@ -74,7 +77,10 @@ class GenericFixedWidthParser(Parser):
         return file_path.suffix.lower() in [".txt", ".dat", ".prn"]
 
     def parse_file(
-        self, file_path: Path, account_config: dict[str, Any]
+        self,
+        file_path: Path,
+        account_config: dict[str, Any],
+        config_manager: "ConfigManager | None" = None,
     ) -> Iterator[Transaction]:
         """Parse fixed-width text file and yield Transaction objects."""
         try:

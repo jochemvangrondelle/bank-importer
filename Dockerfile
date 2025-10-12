@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy source code and submodules first (needed for local dependencies)
+# Copy source code
 COPY src/ ./src/
 
 # Copy uv configuration files and README (needed for package metadata)

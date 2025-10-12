@@ -81,7 +81,7 @@ class DatabaseManager:
             statement = (
                 select(Transaction)
                 .where(Transaction.account_number == account_number)
-                .order_by(Transaction.date.desc())
+                .order_by(Transaction.date.desc())  # type: ignore[attr-defined]
             )
             transactions = session.exec(statement).all()
             return [transaction.to_dict() for transaction in transactions]
@@ -99,7 +99,7 @@ class DatabaseManager:
                 WHERE tc.id IS NULL
                 ORDER BY t.date DESC
             """)
-            result = session.exec(statement, {"target_name": target_name})
+            result = session.execute(statement, {"target_name": target_name})
             return [dict(row._mapping) for row in result]
 
     def mark_target_completed(
@@ -155,7 +155,7 @@ class DatabaseManager:
             session.refresh(import_session)
             return import_session.id or 0
 
-    def update_import_session(self, session_id: int, **kwargs) -> None:
+    def update_import_session(self, session_id: int, **kwargs: Any) -> None:
         """Update import session fields."""
         with Session(self.engine) as session:
             statement = select(ImportSession).where(ImportSession.id == session_id)
@@ -180,7 +180,7 @@ class DatabaseManager:
             statement = (
                 select(ImportSession)
                 .where(ImportSession.account_name == account_name)
-                .order_by(ImportSession.started_at.desc())
+                .order_by(ImportSession.started_at.desc())  # type: ignore[attr-defined]
             )
             sessions = session.exec(statement).all()
             return [session.to_dict() for session in sessions]
@@ -200,7 +200,7 @@ class DatabaseManager:
             statement = (
                 select(Transaction)
                 .where(Transaction.source_file == import_session.file_path)
-                .order_by(Transaction.date.desc())
+                .order_by(Transaction.date.desc())  # type: ignore[attr-defined]
             )
             transactions = session.exec(statement).all()
             return [transaction.to_dict() for transaction in transactions]
@@ -220,7 +220,7 @@ class DatabaseManager:
             statement = (
                 select(ImportSession)
                 .where(ImportSession.status == "pending")
-                .order_by(ImportSession.started_at.asc())
+                .order_by(ImportSession.started_at.asc())  # type: ignore[attr-defined]
             )
             sessions = session.exec(statement).all()
             return [session.to_dict() for session in sessions]
@@ -312,7 +312,7 @@ class DatabaseManager:
 
             # Main query to get unexported transactions
             statement = select(Transaction).where(
-                Transaction.id.not_in(exported_subquery)
+                Transaction.id.not_in(exported_subquery)  # type: ignore[union-attr]
             )
 
             if account_reference:
@@ -320,7 +320,7 @@ class DatabaseManager:
                     Transaction.account_number == account_reference
                 )
 
-            return session.exec(statement).all()
+            return list(session.exec(statement).all())
 
     def get_transactions_by_source_file(self, source_file: str) -> list[Transaction]:
         """Get all transactions from a specific source file."""
@@ -328,15 +328,15 @@ class DatabaseManager:
             statement = (
                 select(Transaction)
                 .where(Transaction.source_file == source_file)
-                .order_by(Transaction.date.desc())
+                .order_by(Transaction.date.desc())  # type: ignore[attr-defined]
             )
-            return session.exec(statement).all()
+            return list(session.exec(statement).all())
 
     def get_all_transactions(self) -> list[Transaction]:
         """Get all transactions from all source files."""
         with Session(self.engine) as session:
-            statement = select(Transaction).order_by(Transaction.date.desc())
-            return session.exec(statement).all()
+            statement = select(Transaction).order_by(Transaction.date.desc())  # type: ignore[attr-defined]
+            return list(session.exec(statement).all())
 
     def get_unique_source_files(self) -> list[str]:
         """Get list of all unique source files."""
@@ -344,7 +344,7 @@ class DatabaseManager:
             statement = (
                 select(Transaction.source_file)
                 .distinct()
-                .where(Transaction.source_file.is_not(None))
+                .where(Transaction.source_file.is_not(None))  # type: ignore[union-attr]
             )
             result = session.exec(statement).all()
             return [file for file in result if file]
@@ -357,7 +357,7 @@ class DatabaseManager:
             statement = select(ExportSession)
             if target_name:
                 statement = statement.where(ExportSession.target_name == target_name)
-            statement = statement.order_by(ExportSession.started_at.desc())
+            statement = statement.order_by(ExportSession.started_at.desc())  # type: ignore[attr-defined]
             sessions = session.exec(statement).all()
             return [session.model_dump() for session in sessions]
 
@@ -365,9 +365,9 @@ class DatabaseManager:
         """Clear all export sessions and exported transactions."""
         with Session(self.engine) as session:
             # Delete exported transactions first (foreign key constraint)
-            session.exec(text("DELETE FROM exportedtransaction"))
+            session.execute(text("DELETE FROM exportedtransaction"))
             # Delete export sessions
-            session.exec(text("DELETE FROM exportsession"))
+            session.execute(text("DELETE FROM exportsession"))
             session.commit()
 
     def has_source_file_been_exported(
@@ -387,7 +387,7 @@ class DatabaseManager:
 
             # Build query to check exported transactions
             statement = select(ExportedTransaction).where(
-                ExportedTransaction.transaction_id.in_(transaction_ids)
+                ExportedTransaction.transaction_id.in_(transaction_ids)  # type: ignore[attr-defined]
             )
 
             if target_name:

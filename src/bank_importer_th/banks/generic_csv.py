@@ -7,7 +7,10 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..config import ConfigManager
 
 from ..interfaces.parser import Parser
 from ..models.transaction import Transaction
@@ -118,7 +121,10 @@ class GenericCsvParser(Parser):
         return True
 
     def parse_file(
-        self, file_path: Path, account_config: dict[str, Any]
+        self,
+        file_path: Path,
+        account_config: dict[str, Any],
+        config_manager: "ConfigManager | None" = None,
     ) -> Iterator[Transaction]:
         """Parse CSV/TSV file and yield Transaction objects."""
         # Validate file exists and is a file
@@ -274,7 +280,7 @@ class GenericCsvParser(Parser):
         field_mapping: dict[str, str],
         account_config: dict[str, Any],
         file_path: Path,
-    ) -> Transaction:
+    ) -> Transaction | None:
         """Parse a single CSV row into a Transaction object."""
         # Extract basic fields with proper type handling
         date_str = str(row.get(field_mapping.get("date", ""), ""))
@@ -323,8 +329,8 @@ class GenericCsvParser(Parser):
         )
 
         # Parse amounts
-        amount = self._parse_amount(amount_str) if amount_str else Decimal("0")
-        balance = self._parse_amount(balance_str) if balance_str else Decimal("0")
+        amount = self._parse_amount(amount_str) or Decimal("0")
+        balance = self._parse_amount(balance_str) or Decimal("0")
         old_balance = self._parse_amount(old_balance_str) if old_balance_str else None
         new_balance = self._parse_amount(new_balance_str) if new_balance_str else None
         exchange_rate = (

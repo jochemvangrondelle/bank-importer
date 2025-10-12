@@ -5,7 +5,10 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..config import ConfigManager
 
 import pdfplumber
 import pytz
@@ -88,7 +91,10 @@ class KrungsriPdfParser(Parser):
         return True
 
     def parse_file(
-        self, file_path: Path, account_config: dict[str, Any], config_manager=None
+        self,
+        file_path: Path,
+        account_config: dict[str, Any],
+        config_manager: "ConfigManager | None" = None,
     ) -> Iterator[Transaction]:
         """Parse Krungsri PDF statement and yield Transaction objects."""
         # Get password from account configuration

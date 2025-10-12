@@ -2,6 +2,10 @@
 
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .processor import Processor
 
 from .config import ConfigManager
 from .interfaces.target import Target, TargetResult
@@ -19,10 +23,10 @@ class TargetManager:
         self.config_manager = config_manager
         self.db_manager = db_manager
         self.targets: dict[str, Target] = {}
-        self.processor = None  # Will be initialized when needed
+        self.processor: Processor | None = None  # Will be initialized when needed
         self._initialize_targets()
 
-    def _get_processor(self):
+    def _get_processor(self) -> "Processor":
         """Get or create processor instance."""
         if self.processor is None:
             from .processor import Processor
@@ -79,7 +83,7 @@ class TargetManager:
         if not parser:
             raise ValueError(f"Parser '{detected_parser_name}' not found")
 
-        return parser.get_bank_type()
+        return str(parser.get_bank_type())
 
     def _get_organized_output_dir(self, bank_type: str, base_output_dir: str) -> Path:
         """Get organized output directory for a bank type."""
@@ -244,7 +248,7 @@ class TargetManager:
         source_files = self.db_manager.get_unique_source_files()
 
         # Group transactions by bank type
-        bank_transactions = {}
+        bank_transactions: dict[str, list] = {}
         all_transactions = []
 
         # Export each source file separately
@@ -380,7 +384,7 @@ class TargetManager:
 
                 try:
                     # Create a temporary target with the organized directory
-                    temp_target = target.__class__(output_dir=str(organized_dir))
+                    temp_target = target.__class__(output_dir=str(organized_dir))  # type: ignore[call-arg]
                     result_dict = temp_target.export_transactions(transactions, config)
                     result = TargetResult(**result_dict)
 
@@ -461,7 +465,7 @@ class TargetManager:
 
                 try:
                     # Create a temporary target with the organized directory
-                    temp_target = target.__class__(output_dir=str(organized_dir))
+                    temp_target = target.__class__(output_dir=str(organized_dir))  # type: ignore[call-arg]
                     result_dict = temp_target.export_transactions(transactions, config)
                     result = TargetResult(**result_dict)
 
@@ -540,7 +544,7 @@ class TargetManager:
 
             try:
                 # Create a temporary target with the organized directory
-                temp_target = target.__class__(output_dir=str(all_dir))
+                temp_target = target.__class__(output_dir=str(all_dir))  # type: ignore[call-arg]
                 result_dict = temp_target.export_transactions(all_transactions, config)
                 result = TargetResult(**result_dict)
 

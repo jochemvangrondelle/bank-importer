@@ -335,10 +335,8 @@ class CsvTarget(Target):
 
         # Extract Amex-specific fields from raw_json if available
         amex_fields: dict[str, str] = {}
-        if transaction.raw_json and isinstance(transaction.raw_json, dict):
-            import typing
-
-            raw_json_dict = typing.cast(dict[str, Any], transaction.raw_json)
+        raw_json_dict = transaction.get_raw_json_dict()
+        if raw_json_dict:
             amex_fields = {
                 "card_member": str(raw_json_dict.get("card_member", "")),
                 "appears_on_statement": str(

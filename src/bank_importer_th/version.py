@@ -1,6 +1,7 @@
 """Version management utilities."""
 
 import os
+from typing import Any
 
 
 def get_version() -> str:
@@ -10,7 +11,7 @@ def get_version() -> str:
     return __version__
 
 
-def get_version_info() -> dict:
+def get_version_info() -> dict[str, Any]:
     """Get detailed version information."""
     version = get_version()
 
@@ -52,4 +53,4 @@ def format_version() -> str:
     if build_info:
         return f"{version} ({', '.join(build_info)})"
 
-    return version
+    return str(version)

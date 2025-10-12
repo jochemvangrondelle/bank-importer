@@ -1,5 +1,8 @@
 """Status command for the bank importer CLI."""
 
+from datetime import datetime
+from typing import Any
+
 from rich.table import Table
 
 from ...cli_parameters import CONFIG_FILE_PARAM
@@ -130,7 +133,7 @@ def status(
 
             # Add rows (show all sessions, not just last 10)
             # Sort by Min Date with fallback to filename
-            def sort_key(session):
+            def sort_key(session: dict[str, Any]) -> tuple[datetime, str]:
                 # Get transactions for this session to find min date
                 transactions_in_session = db_manager.get_transactions_by_session(
                     session["id"]
@@ -153,9 +156,9 @@ def status(
                     else ""
                 )
                 return (
-                    max_date or "0000-12-31",
+                    max_date or datetime(1900, 1, 1),
                     filename,
-                )  # Use far future date if no min_date
+                )  # Use far past date if no max_date
 
             all_sorted_sessions = sorted(
                 all_sessions,

@@ -5,7 +5,10 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..config import ConfigManager
 
 import pytz
 
@@ -90,7 +93,10 @@ class KrungsriTextParser(Parser):
             return False
 
     def parse_file(
-        self, file_path: Path, account_config: dict, config_manager=None
+        self,
+        file_path: Path,
+        account_config: dict,
+        config_manager: "ConfigManager | None" = None,
     ) -> Iterator[Transaction]:
         """Parse Krungsri text file and yield transactions."""
         with open(file_path, encoding="utf-8") as f:
@@ -114,7 +120,11 @@ class KrungsriTextParser(Parser):
                 continue
 
     def _parse_line(
-        self, line: str, account_config: dict, source_file: str, config_manager=None
+        self,
+        line: str,
+        account_config: dict,
+        source_file: str,
+        config_manager: "ConfigManager | None" = None,
     ) -> Transaction:
         """Parse a single transaction line."""
         # Use regex to find amount and balance patterns (numbers with commas and decimals)

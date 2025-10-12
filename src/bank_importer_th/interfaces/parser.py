@@ -3,9 +3,12 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..models.transaction import Transaction
+
+if TYPE_CHECKING:
+    from ..config import ConfigManager
 
 
 class Parser(ABC):
@@ -13,7 +16,10 @@ class Parser(ABC):
 
     @abstractmethod
     def parse_file(
-        self, file_path: Path, account_config: dict, config_manager=None
+        self,
+        file_path: Path,
+        account_config: dict,
+        config_manager: "ConfigManager | None" = None,
     ) -> Iterator[Transaction]:
         """Parse a bank statement file and yield transactions."""
         pass

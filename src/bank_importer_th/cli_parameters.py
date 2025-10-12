@@ -115,7 +115,7 @@ REPROCESS_EXISTING_PARAM = typer.Option(
 class LazyDependencies:
     """Lazy loading container for common CLI dependencies."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._processor: Processor | None = None
         self._db_manager: DatabaseManager | None = None
 

@@ -4,9 +4,14 @@ import logging
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .translation_service import TranslationService
 
 from .config import ConfigManager
 from .interfaces.parser import Parser
+from .interfaces.target import TargetResult
 from .models.database import DatabaseManager
 from .models.import_session import ImportSession
 from .models.transaction import Transaction
@@ -25,7 +30,7 @@ class Processor:
         self.logger = logging.getLogger(__name__)
         self.parser_detector = ParserDetector()
         # Initialize translation service once
-        self.translation_service = None
+        self.translation_service: TranslationService | None = None
         self._init_translation_service()
 
     def identify_pending_import_jobs(self) -> list[dict]:
@@ -114,6 +119,9 @@ class Processor:
                     total_errors += 1
                     continue
 
+                # At this point, detected_parser_name is guaranteed to be a string
+                assert detected_parser_name is not None
+
                 self.logger.info(
                     f"Detected parser '{detected_parser_name}' for file: {file_path}"
                 )
@@ -154,7 +162,7 @@ class Processor:
             )
             try:
                 transactions = list(
-                    self._process_file(file_path, account_config, detected_parser_name)
+                    self._process_file(file_path, account_config, detected_parser_name)  # type: ignore[arg-type]
                 )
                 total_processed += len(transactions)
             except Exception:
@@ -360,7 +368,7 @@ class Processor:
         )
         return self.db_manager.create_import_session(import_session)
 
-    def _update_import_session(self, session_id: int, **kwargs) -> None:
+    def _update_import_session(self, session_id: int, **kwargs: Any) -> None:
         """Update import session fields."""
         self.db_manager.update_import_session(session_id, **kwargs)
 
@@ -402,14 +410,20 @@ class Processor:
             transaction_id, target_name, error_message
         )
 
-    def sync_to_target(self, target_name: str, account_reference: str | None = None):
+    def sync_to_target(
+        self, target_name: str, account_reference: str | None = None
+    ) -> TargetResult:
         """Sync transactions to a specific target."""
         return self.target_manager.sync_to_target(target_name, account_reference)
 
-    def sync_all_targets(self, account_reference: str | None = None):
+    def sync_all_targets(
+        self, account_reference: str | None = None
+    ) -> dict[str, TargetResult]:
         """Sync transactions to all enabled targets."""
         return self.target_manager.sync_all_targets(account_reference)
 
-    def get_export_sessions(self, target_name: str | None = None):
+    def get_export_sessions(
+        self, target_name: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get export sessions."""
         return self.db_manager.get_export_sessions(target_name)

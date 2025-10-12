@@ -5,7 +5,10 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..config import ConfigManager
 
 from ..interfaces.parser import Parser
 from ..models.transaction import Transaction
@@ -73,7 +76,10 @@ class GenericJsonParser(Parser):
         return file_path.suffix.lower() in [".json", ".jsonl"]
 
     def parse_file(
-        self, file_path: Path, account_config: dict[str, Any]
+        self,
+        file_path: Path,
+        account_config: dict[str, Any],
+        config_manager: "ConfigManager | None" = None,
     ) -> Iterator[Transaction]:
         """Parse JSON file and yield Transaction objects."""
         try:
@@ -148,7 +154,7 @@ class GenericJsonParser(Parser):
         """Parse a single transaction from JSON data."""
         try:
             # Extract values with flexible field mapping
-            field_mapping = self._create_field_mapping(data.keys())
+            field_mapping = self._create_field_mapping(list(data.keys()))
 
             # Extract mapped values
             extracted_data = {}
