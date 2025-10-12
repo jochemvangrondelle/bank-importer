@@ -8,21 +8,21 @@ help: ## Show this help message
 
 # Development
 install: ## Install development dependencies
-	uv sync --group dev
+	uv sync --group dev --python 3.11
 
 test: ## Run tests
-	uv run pytest tests/ -v
+	uv run --python 3.11 pytest tests/ -v
 
 lint: ## Run linting
-	uv run ruff check src/ tests/
-	uv run mypy src/
+	uv run --python 3.11 ruff check src/ tests/
+	uv run --python 3.11 mypy src/
 
 clean: ## Clean build artifacts
 	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/
 
 # Version management
 version: ## Show current version
-	@uv run python -c "from src.bank_importer_th import __version__; print(__version__)"
+	@uv run --python 3.11 python -c "from src.bank_importer_th import __version__; print(__version__)"
 
 # Docker
 docker-build: ## Build Docker image (Python 3.13) for local platform
@@ -45,9 +45,9 @@ docker-push: ## Push Docker image to registry (deprecated, use docker-build-push
 
 # Semantic Release
 semantic-release: ## Run semantic release (version, changelog, publish)
-	uv run semantic-release version
-	uv run semantic-release changelog
-	uv run semantic-release publish
+	uv run --python 3.11 semantic-release version
+	uv run --python 3.11 semantic-release changelog
+	uv run --python 3.11 semantic-release publish
 
 # Release
 release: ## Create a new release using semantic-release
@@ -57,19 +57,19 @@ release: ## Create a new release using semantic-release
 
 # CI/CD helpers
 ci-test: ## Run tests for CI
-	uv run pytest tests/ --cov=src/ --cov-report=xml
+	uv run --python 3.11 pytest tests/ --cov=src/ --cov-report=xml
 
 ci-lint: ## Run linting for CI
-	uv run ruff check src/ tests/
-	uv run mypy src/
+	uv run --python 3.11 ruff check src/ tests/
+	uv run --python 3.11 mypy src/
 
 ci-build: ## Build for CI
-	uv run python -m build
+	uv run --python 3.11 python -m build
 
 # Development workflow
 dev-setup: ## Setup development environment
-	uv sync --group dev
-	uv run pre-commit install
+	uv sync --group dev --python 3.11
+	uv run --python 3.11 pre-commit install
 
 dev-check: ## Run all development checks
 	$(MAKE) lint
@@ -78,11 +78,11 @@ dev-check: ## Run all development checks
 
 # Commit helpers
 commit: ## Interactive commit using commitizen
-	uv run cz commit
+	uv run --python 3.11 cz commit
 
 # Pre-commit
 pre-commit: ## Run pre-commit on all files
-	uv run pre-commit run --all-files
+	uv run --python 3.11 pre-commit run --all-files
 
 # Test Gitea release configuration
 test-gitea-release: ## Test Gitea release configuration

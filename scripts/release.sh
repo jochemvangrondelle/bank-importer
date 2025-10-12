@@ -36,7 +36,7 @@ if [ ! -f "pyproject.toml" ]; then
 fi
 
 # Get current version
-CURRENT_VERSION=$(uv run python -c "from src.bank_importer_th import __version__; print(__version__)")
+CURRENT_VERSION=$(uv run --python 3.11 python -c "from src.bank_importer_th import __version__; print(__version__)")
 print_status "Current version: $CURRENT_VERSION"
 
 # Determine version bump type
@@ -56,24 +56,24 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 # Bump version
-uv run bump2version --allow-dirty $BUMP_TYPE
+uv run --python 3.11 bump2version --allow-dirty $BUMP_TYPE
 
 # Get new version
-NEW_VERSION=$(uv run python -c "from src.bank_importer_th import __version__; print(__version__)")
+NEW_VERSION=$(uv run --python 3.11 python -c "from src.bank_importer_th import __version__; print(__version__)")
 print_success "Version bumped to: $NEW_VERSION"
 
 # Run tests
 print_status "Running tests..."
-uv run pytest tests/ -v
+uv run --python 3.11 pytest tests/ -v
 
 # Run linting
 print_status "Running linting..."
-uv run ruff check src/ tests/
-uv run mypy src/
+uv run --python 3.11 ruff check src/ tests/
+uv run --python 3.11 mypy src/
 
 # Build package
 print_status "Building package..."
-uv run python -m build
+uv run --python 3.11 python -m build
 
 # Build Docker image
 print_status "Building Docker image..."

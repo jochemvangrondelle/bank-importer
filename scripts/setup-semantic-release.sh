@@ -19,14 +19,14 @@ uv sync --group dev
 
 # Install pre-commit hooks
 echo "🔧 Installing pre-commit hooks..."
-uv run pre-commit install
-uv run pre-commit install --hook-type commit-msg
+uv run --python 3.11 pre-commit install
+uv run --python 3.11 pre-commit install --hook-type commit-msg
 
 # Verify installation
 echo "✅ Verifying installation..."
 
 # Check if commitizen is working
-if uv run cz --version > /dev/null 2>&1; then
+if uv run --python 3.11 cz --version > /dev/null 2>&1; then
     echo "✅ Commitizen installed successfully"
 else
     echo "❌ Commitizen installation failed"
@@ -34,7 +34,7 @@ else
 fi
 
 # Check if semantic-release is working
-if uv run semantic-release --version > /dev/null 2>&1; then
+if uv run --python 3.11 semantic-release --version > /dev/null 2>&1; then
     echo "✅ Semantic-release installed successfully"
 else
     echo "❌ Semantic-release installation failed"
@@ -42,7 +42,7 @@ else
 fi
 
 # Check pre-commit hooks
-if uv run pre-commit --version > /dev/null 2>&1; then
+if uv run --python 3.11 pre-commit --version > /dev/null 2>&1; then
     echo "✅ Pre-commit installed successfully"
 else
     echo "❌ Pre-commit installation failed"

@@ -6,7 +6,7 @@ authors = [{ name = "Jochem van Grondelle", email = "jochem@vangrondelle.net" }]
 readme = "README.md"
 license = { text = "GNU Affero General Public License v3" }
 keywords = ['python', 'bank', 'pdf', 'parser', 'firefly-iii', 'thailand', 'financial']
-requires-python = ">=3.9,<4.0"
+requires-python = ">=3.11,<3.15"
 dependencies = [
     "sqlmodel>=0.0.14",
     "typer>=0.9.0",
@@ -29,11 +29,10 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Office/Business :: Financial",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities",
@@ -198,6 +197,7 @@ exclude = '''
 [tool.isort]
 profile           = "black"
 multi_line_output = 3
+target_version    = "py311"
 line_length       = 88
 skip_glob         = ["src/submodules/firefly-iii-client/test/*"]
 

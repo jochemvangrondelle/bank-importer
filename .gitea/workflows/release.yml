@@ -83,9 +83,9 @@ jobs:
           GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           GITEA_API_URL: ${{ vars.GITEA_API_URL || 'https://git.jochempiya.org/api/v1' }}
         run: |
-          uv run semantic-release version
-          uv run semantic-release changelog
-          uv run semantic-release publish
+          uv run --python 3.11 semantic-release version
+          uv run --python 3.11 semantic-release changelog
+          uv run --python 3.11 semantic-release publish
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -104,7 +104,7 @@ jobs:
       - name: Build Docker image (multi-platform)
         run: |
           # Get version from semantic-release
-          VERSION=$(uv run python -c "from bank_importer_th import __version__; print(__version__)")
+          VERSION=$(uv run --python 3.11 python -c "from bank_importer_th import __version__; print(__version__)")
           echo "Building Docker image version: $VERSION for multiple platforms"
 
           # Determine tags based on branch

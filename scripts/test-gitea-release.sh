@@ -14,7 +14,7 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
 fi
 
 # Check if semantic-release is installed
-if ! uv run semantic-release --version > /dev/null 2>&1; then
+if ! uv run --python 3.11 --python 3.11 semantic-release --version > /dev/null 2>&1; then
     echo "❌ Error: semantic-release not installed"
     echo "Run: uv sync --group dev"
     exit 1
@@ -24,41 +24,41 @@ echo "✅ Semantic-release is installed"
 
 # Test configuration
 echo "🔧 Testing semantic-release configuration..."
-if uv run semantic-release print-config > /dev/null 2>&1; then
+if uv run --python 3.11 semantic-release print-config > /dev/null 2>&1; then
     echo "✅ Configuration is valid"
 else
     echo "❌ Configuration error"
-    uv run semantic-release print-config
+    uv run --python 3.11 semantic-release print-config
     exit 1
 fi
 
 # Test dry-run version bump
 echo "🔍 Testing version bump (dry-run)..."
-if uv run semantic-release version --dry-run > /dev/null 2>&1; then
+if uv run --python 3.11 semantic-release version --dry-run > /dev/null 2>&1; then
     echo "✅ Version bump test passed"
 else
     echo "❌ Version bump test failed"
-    uv run semantic-release version --dry-run
+    uv run --python 3.11 semantic-release version --dry-run
     exit 1
 fi
 
 # Test dry-run changelog
 echo "📝 Testing changelog generation (dry-run)..."
-if uv run semantic-release changelog --dry-run > /dev/null 2>&1; then
+if uv run --python 3.11 semantic-release changelog --dry-run > /dev/null 2>&1; then
     echo "✅ Changelog generation test passed"
 else
     echo "❌ Changelog generation test failed"
-    uv run semantic-release changelog --dry-run
+    uv run --python 3.11 semantic-release changelog --dry-run
     exit 1
 fi
 
 # Test dry-run publish
 echo "🚀 Testing release creation (dry-run)..."
-if uv run semantic-release publish --dry-run > /dev/null 2>&1; then
+if uv run --python 3.11 semantic-release publish --dry-run > /dev/null 2>&1; then
     echo "✅ Release creation test passed"
 else
     echo "❌ Release creation test failed"
-    uv run semantic-release publish --dry-run
+    uv run --python 3.11 semantic-release publish --dry-run
     exit 1
 fi
 
