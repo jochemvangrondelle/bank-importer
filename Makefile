@@ -13,12 +13,33 @@ install: ## Install development dependencies
 test: ## Run tests
 	uv run --python 3.11 pytest tests/ -v -n auto
 
+test-tox: ## Run tests with tox in parallel (all Python versions)
+	tox --parallel auto
+
+test-tox-sequential: ## Run tests with tox sequentially (all Python versions) - DEPRECATED
+	tox
+
+test-tox-py311: ## Run tests with tox (Python 3.11 only)
+	tox -e py311
+
+test-tox-py312: ## Run tests with tox (Python 3.12 only)
+	tox -e py312
+
+test-tox-py313: ## Run tests with tox (Python 3.13 only)
+	tox -e py313
+
+test-tox-py314: ## Run tests with tox (Python 3.14 only)
+	tox -e py314
+
 lint: ## Run linting
 	uv run --python 3.11 ruff check src/ tests/
 	uv run --python 3.11 mypy src/
 
 clean: ## Clean build artifacts
 	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/
+
+clean-tox: ## Clean tox environments
+	tox --clean
 
 # Version management
 version: ## Show current version
@@ -74,6 +95,7 @@ dev-setup: ## Setup development environment
 dev-check: ## Run all development checks
 	$(MAKE) lint
 	$(MAKE) test
+	$(MAKE) test-tox
 	$(MAKE) version
 
 # Commit helpers
