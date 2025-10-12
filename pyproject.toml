@@ -111,6 +111,14 @@ disallow_untyped_calls = true
     module                 = "firefly_iii_client.*"
     ignore_missing_imports = true
 
+    [[tool.mypy.overrides]]
+    module                 = "deep_translator.*"
+    ignore_missing_imports = true
+
+    [[tool.mypy.overrides]]
+    module                 = "googletrans.*"
+    ignore_missing_imports = true
+
 [tool.pyright]
 include = ["src"]
 exclude = [

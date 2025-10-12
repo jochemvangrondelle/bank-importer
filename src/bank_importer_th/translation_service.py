@@ -108,7 +108,12 @@ class TranslationService:
         try:
             if self.cache_file.exists():
                 with open(self.cache_file, encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        return data
+                    print(
+                        "Warning: Cache file contains non-dict data, using empty cache"
+                    )
         except Exception as e:
             print(f"Warning: Could not load translation cache: {e}")
         return {}
@@ -174,8 +179,21 @@ class TranslationService:
             response.raise_for_status()
 
             data = response.json()
-            if "data" in data and "translations" in data["data"]:
-                return data["data"]["translations"][0]["translatedText"]
+            if (
+                isinstance(data, dict)
+                and "data" in data
+                and "translations" in data["data"]
+            ):
+                translations = data["data"]["translations"]
+                if isinstance(translations, list) and len(translations) > 0:
+                    first_translation = translations[0]
+                    if (
+                        isinstance(first_translation, dict)
+                        and "translatedText" in first_translation
+                    ):
+                        translated_text = first_translation["translatedText"]
+                        if isinstance(translated_text, str):
+                            return translated_text
 
         except Exception as e:
             print(f"API translation error: {e}")
@@ -184,10 +202,10 @@ class TranslationService:
 
     def _translate_with_deep_translator(self, text: str) -> str | None:
         """Translate text using deep-translator library."""
-        if not self.translator or not DEEP_TRANSLATOR_AVAILABLE:
+        if not self.translator or not DEEP_TRANSLATOR_AVAILABLE:  # type: ignore[unreachable]
             return None
 
-        try:
+        try:  # type: ignore[unreachable]
             # deep-translator uses a different API
             if hasattr(self.translator, "translate"):
                 result = self.translator.translate(text)
@@ -203,11 +221,11 @@ class TranslationService:
         if (
             not self.translator
             or self._googletrans_disabled
-            or not GOOGLETRANS_AVAILABLE
+            or not GOOGLETRANS_AVAILABLE  # type: ignore[unreachable]
         ):
             return None
 
-        try:
+        try:  # type: ignore[unreachable]
             result = self.translator.translate(
                 text, src=self.source_language, dest=self.target_language
             )
@@ -354,7 +372,7 @@ class TranslationService:
 
         return results
 
-    def get_cache_stats(self) -> dict[str, int]:
+    def get_cache_stats(self) -> dict[str, int | str]:
         """Get translation cache statistics."""
         return {
             "total_entries": len(self.translation_cache),
@@ -399,7 +417,7 @@ class TranslationService:
 
 
 # Global singleton instance
-_translation_service_instance = None
+_translation_service_instance: TranslationService | None = None
 
 
 def get_translation_service(
