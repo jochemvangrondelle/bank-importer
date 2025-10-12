@@ -15,7 +15,7 @@ class FireflyTarget(Target):
 
     def __init__(self, output_dir: str = "data/out"):
         self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def get_name(self) -> str:
         return "firefly"

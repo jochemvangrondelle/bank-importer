@@ -210,8 +210,9 @@ line_length       = 88
 skip_glob         = ["packages/firefly-iii-client/test/*"]
 
 [tool.coverage.run]
-source = ["src"]
-omit   = ["*/tests/*", "*/test_*.py"]
+source   = ["src"]
+omit     = ["*/tests/*", "*/test_*.py"]
+parallel = true
 
 [tool.coverage.report]
 exclude_lines = [
