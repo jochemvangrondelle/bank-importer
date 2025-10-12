@@ -17,10 +17,16 @@ class ImportSession(SQLModel, table=True):
     # Core session data
     account_name: str = Field(max_length=200, nullable=False, index=True)
     bank_name: str = Field(max_length=100, nullable=False, index=True)
-    session_name: str = Field(max_length=100, nullable=False)  # e.g., "2024-11", "2024-12", "manual_import"
+    session_name: str = Field(
+        max_length=100, nullable=False
+    )  # e.g., "2024-11", "2024-12", "manual_import"
     file_path: str = Field(max_length=500, nullable=False)
-    file_hash: str = Field(max_length=64, nullable=False, index=True)  # For deduplication
-    status: str = Field(max_length=20, nullable=False, index=True)  # pending, processing, completed, failed
+    file_hash: str = Field(
+        max_length=64, nullable=False, index=True
+    )  # For deduplication
+    status: str = Field(
+        max_length=20, nullable=False, index=True
+    )  # pending, processing, completed, failed
 
     # Processing statistics
     total_transactions: int = Field(default=0, nullable=False)
@@ -29,7 +35,9 @@ class ImportSession(SQLModel, table=True):
 
     # Timestamps
     started_at: datetime = Field(sa_column=Column(DateTime, nullable=False, index=True))
-    completed_at: datetime | None = Field(default=None, sa_column=Column(DateTime, index=True))
+    completed_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime, index=True)
+    )
     error_message: str | None = Field(default=None, sa_column=Column(Text))
 
     # Database indexes
@@ -64,6 +72,8 @@ class ImportSession(SQLModel, table=True):
             "processed_transactions": self.processed_transactions,
             "error_count": self.error_count,
             "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "completed_at": self.completed_at.isoformat()
+            if self.completed_at
+            else None,
             "error_message": self.error_message,
         }

@@ -1,29 +1,42 @@
 [project]
 name = "bank-importer-th"
-dynamic = ["version"]
-# version = "0.1.0"
-description = "Importer for TH PDF bank statements"
+version = "0.1.0"
+description = "A Python application that parses Thai bank export PDFs and exports transactions to CSV format suitable for import into Firefly-III"
 authors = [{ name = "Jochem van Grondelle", email = "jochem@vangrondelle.net" }]
 readme = "README.md"
-keywords = ['python']
-requires-python = ">=3.9,<4.0"
+license = { text = "GNU Affero General Public License v3" }
+keywords = ['python', 'bank', 'pdf', 'parser', 'firefly-iii', 'thailand', 'financial']
+requires-python = ">=3.11,<3.15"
 dependencies = [
     "sqlmodel>=0.0.14",
-    "click>=8.0.0",
+    "typer>=0.9.0",
     "toml>=0.10.0",
     "pdfplumber>=0.11.7",
     "types-toml>=0.10.8.20240310",
+    "rich>=14.0.0",
+    "google-trans>=2.4.0",
+    "googletrans>=4.0.2",
+    "pyyaml>=6.0.2",
+    "pytz>=2024.1",
+    "deep-translator>=1.11.4",
+    "uv-dynamic-versioning",
+    "firefly-iii-api-client @ git+https://github.com/jochemvangrondelle/firefly-iii-client.git",
 ]
 classifiers = [
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Office/Business :: Financial",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
 ]
 
     [project.urls]
@@ -31,70 +44,108 @@ classifiers = [
     Repository    = "https://github.com/jochemvangrondelle/bank-importer-th"
     Documentation = "https://jochemvangrondelle.github.io/bank-importer-th/"
 
-[dependency-groups]
-dev = [
-    "pytest>=7.2.0",
-    "pre-commit>=2.20.0",
-    "tox-uv>=1.11.3",
-    "mypy>=0.991",
-    "pytest-cov>=4.0.0",
-    "ruff>=0.11.5",
-    "pyright>=1.1.0",
-    "pytest-mock>=3.10.0",
-    "pytest-asyncio>=0.21.0",
-    "python-semantic-release>=8.0.0",
-    "commitizen>=3.0.0",
-]
+
+    [project.optional-dependencies]
+    dev = [
+        "pytest>=7.2.0",
+        "pytest-xdist>=3.0.0",
+        "pre-commit>=2.20.0",
+        "tox-uv>=1.11.3",
+        "mypy>=0.991",
+        "pytest-cov>=4.0.0",
+        "ruff>=0.11.5",
+        "pyright>=1.1.0",
+        "pytest-mock>=3.10.0",
+        "pytest-asyncio>=0.21.0",
+        "python-semantic-release>=8.0.0",
+        "commitizen>=3.0.0",
+    ]
+
+
+    [project.scripts]
+    bank-importer-th = "bank_importer_th.cli_main:app"
 
 [build-system]
-requires      = ["hatchling", "uv-dynamic-versioning"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-source = "uv-dynamic-versioning"
+requires      = ["uv_build>=0.9.2,<0.10.0", "uv-dynamic-versioning"]
+build-backend = "uv_build"
 
 [tool.uv-dynamic-versioning]
 fallback-version = "0.0.0"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/bank_importer_th"]
+
+[dependency-groups]
+dev = [
+    "python-semantic-release>=8.0.0",
+    "commitizen>=3.0.0",
+    "pytest>=8.4.1",
+    "pytest-xdist>=3.0.0",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.12.4",
+    "mypy>=1.18.2",
+    "types-requests>=2.32.4.20250913",
+    "types-pyyaml>=6.0.12.20250915",
+    "types-pytz>=2025.2.0.20250809",
+    "types-setuptools>=80.9.0.20250822",
+]
 
 [tool.mypy]
-files                       = ["src"]
-disallow_untyped_defs       = true
-disallow_any_unimported     = true
-no_implicit_optional        = true
-check_untyped_defs          = true
-warn_return_any             = true
-warn_unused_ignores         = true
-show_error_codes            = true
-strict_equality             = true
-warn_redundant_casts        = true
-warn_unused_configs         = true
-warn_no_return              = true
-warn_unreachable            = true
+exclude = [
+    "packages/firefly-iii-client/build",
+    "packages/firefly-iii-client/firefly_iii_client/*",
+    "packages/firefly-iii-client/test/*",
+]
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_no_return = true
+warn_unreachable = true
 disallow_untyped_decorators = true
-disallow_incomplete_defs    = true
-disallow_untyped_calls      = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+
+    [[tool.mypy.overrides]]
+    module                 = "firefly_iii_client.*"
+    ignore_missing_imports = true
+
+    [[tool.mypy.overrides]]
+    module                 = "deep_translator.*"
+    ignore_missing_imports = true
+
+    [[tool.mypy.overrides]]
+    module                 = "googletrans.*"
+    ignore_missing_imports = true
 
 [tool.pyright]
-include                      = ["src"]
-exclude                      = ["tests", "venv", ".venv"]
-typeCheckingMode             = "strict"
-useLibraryCodeForTypes       = true
-reportMissingImports         = true
-reportMissingTypeStubs       = false
-reportUnusedImport           = true
-reportUnusedClass            = true
-reportUnusedFunction         = true
-reportUnusedVariable         = true
-reportDuplicateImport        = true
-reportOptionalSubscript      = true
-reportOptionalMemberAccess   = true
-reportOptionalCall           = true
-reportOptionalIterable       = true
+include = ["src"]
+exclude = [
+    "tests",
+    "venv",
+    ".venv",
+    "packages/firefly-iii-client/build",
+    "packages/firefly-iii-client/firefly_iii_client",
+]
+typeCheckingMode = "strict"
+useLibraryCodeForTypes = true
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedClass = true
+reportUnusedFunction = true
+reportUnusedVariable = true
+reportDuplicateImport = true
+reportOptionalSubscript = true
+reportOptionalMemberAccess = true
+reportOptionalCall = true
+reportOptionalIterable = true
 reportOptionalContextManager = true
-reportOptionalOperand        = true
+reportOptionalOperand = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -105,6 +156,8 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
+    "-n",
+    "auto",
 ]
 markers = [
     "unit: Unit tests",
@@ -115,90 +168,86 @@ markers = [
 
 [tool.ruff]
 target-version = "py311"
-line-length    = 120
-fix            = true
+line-length    = 88
+exclude        = ["__pycache__", ".git", ".venv", "venv", ".env", "packages"]
 
     [tool.ruff.lint]
     select = [
-        # flake8-2020
-        "YTT",
-        # flake8-bandit
-        "S",
-        # flake8-bugbear
-        "B",
-        # flake8-builtins
-        "A",
-        # flake8-comprehensions
-        "C4",
-        # flake8-debugger
-        "T10",
-        # flake8-simplify
-        "SIM",
-        # isort
-        "I",
-        # mccabe
-        "C90",
-        # pycodestyle
-        "E",
-        "W",
-        # pyflakes
-        "F",
-        # pygrep-hooks
-        "PGH",
-        # pyupgrade
-        "UP",
-        # ruff
-        "RUF",
-        # tryceratops
-        "TRY",
-        # pydocstyle
-        "D",
+        "E",  # pycodestyle errors
+        "W",  # pycodestyle warnings
+        "F",  # pyflakes
+        "I",  # isort
+        "B",  # flake8-bugbear
+        "C4", # flake8-comprehensions
+        "UP", # pyupgrade
     ]
     ignore = [
-        # LineTooLong
-        "E501",
-        # DoNotAssignLambda
-        "E731",
-        # Missing docstring
-        "D100",
-        "D101",
-        "D102",
-        "D103",
-        "D104",
-        "D105",
-        "D106",
-        "D107",
+        "E501", # line too long, handled by black
+        "B008", # do not perform function calls in argument defaults
+        "C901", # too complex
+        "F601", # dictionary key literal repeated (duplicate keys in translation terms)
+        "W293", # blank line contains whitespace (minor formatting)
     ]
 
         [tool.ruff.lint.per-file-ignores]
-        "tests/*" = ["S101"]
+        "__init__.py"                                         = ["F401"]
+        "packages/firefly-iii-client/firefly_iii_client/**/*" = ["E501", "F401", "F403", "F405"]
 
-    [tool.ruff.format]
-    preview = true
+[tool.black]
+target-version = ['py311']
+line-length = 88
+exclude = '''
+/(
+  packages/firefly-iii-client/test
+)/
+'''
 
-[tool.coverage.report]
-skip_empty = true
+[tool.isort]
+profile           = "black"
+multi_line_output = 3
+target_version    = "py311"
+line_length       = 88
+skip_glob         = ["packages/firefly-iii-client/test/*"]
 
 [tool.coverage.run]
-branch = true
-source = ["src"]
+source   = ["src"]
+omit     = ["*/tests/*", "*/test_*.py"]
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "print\\(",
+    "console\\.log\\(",
+    "debug\\(",
+    "logger\\.debug\\(",
+    "logging\\.debug\\(",
+]
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
-version_variable = "src/bank_importer_th/__init__.py:__version__"
 build_command = "uv build"
 dist_path = "dist"
 upload_to_vcs_release = true
 upload_to_pypi = false
 upload_to_release = true
 hvcs = "gitea"
-remote = "origin"
+remote = { name = "origin" }
 major_on_zero = false
 prerelease_tag = "beta"
 prerelease = true
 prerelease_token = "beta"
 build_commit_message = "chore: build {version} [skip ci]"
-commit_author = "semantic-release <semantic-release@gitea.com>"
+commit_author = "semantic-release <semantic-release@jochempiya.org>"
 commit_subject = "chore: release {version}"
 commit_message = "chore: release {version}\n\nAutomatically generated by python-semantic-release"
 tag_commit = true
@@ -222,16 +271,15 @@ changelog_ignore_merge_commits = true
 changelog_ignore_commits_with = ["skip ci", "ci skip", "no ci", "skip changelog", "changelog skip"]
 changelog_ignore_types = ["docs", "style", "test", "build", "ci", "chore"]
 
-# Tag configuration for different branches
-[tool.semantic_release.branches]
-main    = { name = "latest", prerelease = false }
-develop = { name = "develop", prerelease = true, prerelease_token = "alpha" }
-beta    = { name = "beta", prerelease = true, prerelease_token = "beta" }
-stable  = { name = "stable", prerelease = false }
+    # Tag configuration for different branches
+    [tool.semantic_release.branches]
+    develop = { name = "develop", prerelease = true, prerelease_token = "alpha" }
+    beta    = { name = "beta", prerelease = true, prerelease_token = "beta" }
+    stable  = { name = "stable", prerelease = false }
 
-# Gitea-specific settings
-[tool.semantic_release.gitea]
-domain = "git.jochempiya.org"
+    # Gitea-specific settings
+    [tool.semantic_release.gitea]
+    domain = "git.jochempiya.org"
 
 [tool.commitizen]
 name                     = "cz_conventional_commits"
@@ -239,5 +287,6 @@ version                  = "1.0.0"
 tag_format               = "v$version"
 version_scheme           = "pep440"
 version_provider         = "semantic-release"
+files                    = ["src"]
 update_changelog_on_bump = true
 major_version_zero       = true

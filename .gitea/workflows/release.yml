@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - develop
+      - beta
+      - stable
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to release from"
+        required: true
+        default: "develop"
+        type: choice
+        options:
+          - develop
+          - beta
+          - stable
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Initialize submodules
+        run: |
+          echo "Initializing submodules..."
+          git submodule init
+          git submodule update --recursive
+          echo "Submodules initialized"
+
+      - name: Verify submodules
+        run: |
+          echo "Checking submodules..."
+          ls -la src/submodules/
+          if [ -d "src/submodules/firefly-iii-client" ]; then
+            echo "Firefly III client submodule found"
+            ls -la src/submodules/firefly-iii-client/
+            if [ -f "src/submodules/firefly-iii-client/setup.py" ]; then
+              echo "✅ setup.py found in firefly-iii-client"
+            else
+              echo "❌ setup.py NOT found in firefly-iii-client"
+              exit 1
+            fi
+          else
+            echo "ERROR: Firefly III client submodule not found"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "semantic-release"
+          git config --global user.email "semantic-release@gitea.com"
+
+      - name: Run semantic-release
+        env:
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITEA_API_URL: ${{ vars.GITEA_API_URL || 'https://git.jochempiya.org/api/v1' }}
+        run: |
+          uv run --python 3.11 semantic-release version
+          uv run --python 3.11 semantic-release changelog
+          uv run --python 3.11 semantic-release publish
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+          driver-opts: |
+            image=moby/buildkit:buildx-stable-1
+            network=host
+
+      - name: Login to Harbor Registry
+        run: |
+          echo "${{ secrets.HARBOR_PASSWORD }}" | docker login reg.jochempiya.org \
+            --username "${{ secrets.HARBOR_USER }}" \
+            --password-stdin
+
+      - name: Build Docker image (multi-platform)
+        run: |
+          # Get version from semantic-release
+          VERSION=$(uv run --python 3.11 python -c "from bank_importer_th import __version__; print(__version__)")
+          echo "Building Docker image version: $VERSION for multiple platforms"
+
+          # Determine tags based on branch
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          echo "Building for branch: $BRANCH_NAME"
+
+          # Set up tags based on branch
+          TAGS="--tag reg.jochempiya.org/jochem/bank-importer-th:$VERSION"
+
+          if [[ "$BRANCH_NAME" == "develop" || "$BRANCH_NAME" == "beta" ]]; then
+            echo "Adding 'latest' tag for beta release"
+            TAGS="$TAGS --tag reg.jochempiya.org/jochem/bank-importer-th:latest"
+          elif [[ "$BRANCH_NAME" == "stable" || "$BRANCH_NAME" == "main" ]]; then
+            echo "Adding 'stable' tag for stable release"
+            TAGS="$TAGS --tag reg.jochempiya.org/jochem/bank-importer-th:stable"
+          fi
+
+          # Build multi-platform image with Buildx
+          docker buildx build \
+            --target production \
+            --platform linux/amd64,linux/arm64 \
+            --build-arg VERSION="$VERSION" \
+            $TAGS \
+            --push \
+            .

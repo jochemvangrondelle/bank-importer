@@ -1,0 +1,48 @@
+name: Branch Strategy
+
+on:
+  push:
+    branches:
+      - develop
+      - beta
+      - stable
+  pull_request:
+    types: [opened, synchronize, closed]
+
+jobs:
+  merge-to-beta:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Merge develop to beta
+        run: |
+          git config --global user.name "gitea-actions[bot]"
+          git config --global user.email "gitea-actions[bot]@users.noreply.gitea.com"
+          git checkout beta
+          git merge develop --no-edit
+          git push origin beta
+
+  merge-to-stable:
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/beta' &&
+      contains(github.event.head_commit.message, 'chore: release')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Merge beta to stable
+        run: |
+          git config --global user.name "gitea-actions[bot]"
+          git config --global user.email "gitea-actions[bot]@users.noreply.gitea.com"
+          git checkout stable
+          git merge beta --no-edit
+          git push origin stable
