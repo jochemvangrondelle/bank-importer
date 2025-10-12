@@ -1,3 +1,1 @@
-Some random text
-        That doesn't match the Krungsri format
-        At all
+Invalid content

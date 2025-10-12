@@ -64,7 +64,7 @@ print_success "Version bumped to: $NEW_VERSION"
 
 # Run tests
 print_status "Running tests..."
-uv run --python 3.11 pytest tests/ -v
+uv run --python 3.11 pytest tests/ -v -n auto
 
 # Run linting
 print_status "Running linting..."

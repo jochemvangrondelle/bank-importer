@@ -15,12 +15,12 @@ fi
 
 # Install dependencies
 echo "📦 Installing dependencies..."
-uv sync --group dev
+uv sync --python 3.11 --all-groups
 
 # Install pre-commit hooks
 echo "🔧 Installing pre-commit hooks..."
-uv run --python 3.11 pre-commit install
-uv run --python 3.11 pre-commit install --hook-type commit-msg
+uv run pre-commit install
+uv run pre-commit install --hook-type commit-msg
 
 # Verify installation
 echo "✅ Verifying installation..."

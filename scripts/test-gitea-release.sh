@@ -14,7 +14,7 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
 fi
 
 # Check if semantic-release is installed
-if ! uv run --python 3.11 --python 3.11 semantic-release --version > /dev/null 2>&1; then
+if ! uv run --python 3.11 semantic-release --version > /dev/null 2>&1; then
     echo "❌ Error: semantic-release not installed"
     echo "Run: uv sync --group dev"
     exit 1

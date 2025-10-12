@@ -11,7 +11,7 @@ install: ## Install development dependencies
 	uv sync --group dev --python 3.11
 
 test: ## Run tests
-	uv run --python 3.11 pytest tests/ -v
+	uv run --python 3.11 pytest tests/ -v -n auto
 
 lint: ## Run linting
 	uv run --python 3.11 ruff check src/ tests/
@@ -57,7 +57,7 @@ release: ## Create a new release using semantic-release
 
 # CI/CD helpers
 ci-test: ## Run tests for CI
-	uv run --python 3.11 pytest tests/ --cov=src/ --cov-report=xml
+	uv run --python 3.11 pytest tests/ --cov=src/ --cov-report=xml -n auto
 
 ci-lint: ## Run linting for CI
 	uv run --python 3.11 ruff check src/ tests/
