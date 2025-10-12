@@ -28,7 +28,10 @@ jobs:
           git push origin beta
 
   merge-to-stable:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/beta' && contains(github.event.head_commit.message, 'chore: release')
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/beta' &&
+      contains(github.event.head_commit.message, 'chore: release')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

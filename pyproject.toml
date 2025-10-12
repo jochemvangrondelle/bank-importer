@@ -83,6 +83,7 @@ fallback-version = "0.0.0"
 
 [tool.mypy]
 files                       = ["src"]
+exclude                     = ["src/submodules/firefly-iii-client/build"]
 disallow_untyped_defs       = true
 disallow_any_unimported     = true
 no_implicit_optional        = true
@@ -257,4 +258,3 @@ version_scheme           = "pep440"
 version_provider         = "semantic-release"
 update_changelog_on_bump = true
 major_version_zero       = true
-

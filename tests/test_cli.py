@@ -146,12 +146,22 @@ file_path = "test/path"
     @pytest.mark.cli
     def test_account_parameter_validation(self, runner: CliRunner) -> None:
         """Test account parameter validation with invalid account."""
-        result = runner.invoke(app, ["run", "--account", "invalid_account"])
-        assert result.exit_code == 2
-        assert "Invalid account: 'invalid_account'" in result.output
-        assert "Available accounts:" in result.output
-        assert "krungsri_pdf" in result.output
-        assert "scb_pdf" in result.output
+        with (
+            patch(
+                "bank_importer_th.cli_parameters.get_available_accounts"
+            ) as mock_accounts,
+            patch("bank_importer_th.cli.commands.status.status"),
+            patch("bank_importer_th.cli.commands.import_files.import_files"),
+            patch("bank_importer_th.cli.commands.export_multi.export_multi"),
+        ):
+            mock_accounts.return_value = ["krungsri_pdf", "scb_pdf"]
+
+            result = runner.invoke(app, ["run", "--account", "invalid_account"])
+            assert result.exit_code == 2
+            assert "Invalid account: 'invalid_account'" in result.output
+            assert "Available accounts:" in result.output
+            assert "krungsri_pdf" in result.output
+            assert "scb_pdf" in result.output
 
     @pytest.mark.cli
     def test_account_parameter_validation_valid_account(
