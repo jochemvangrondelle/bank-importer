@@ -4,7 +4,7 @@ import logging
 import re
 import sys
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar, Literal
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -69,9 +69,12 @@ class SecretMaskingFormatter(logging.Formatter):
     ]
 
     def __init__(
-        self, fmt: str | None = None, datefmt: str | None = None, style: str = "%"
+        self,
+        fmt: str | None = None,
+        datefmt: str | None = None,
+        style: Literal["%", "{", "$"] = "%",
     ) -> None:
-        super().__init__(fmt, datefmt, style)  # type: ignore[call-arg]
+        super().__init__(fmt, datefmt, style)
 
     def format(self, record: logging.LogRecord) -> str:
         """Format the log record with sensitive data masking."""
@@ -124,7 +127,7 @@ class SecretMaskingFormatter(logging.Formatter):
 
         return masked_message
 
-    def _mask_replacement(self, match):
+    def _mask_replacement(self, match: re.Match[str]) -> str:
         """Replace sensitive data with masked version."""
         groups = match.groups()
 
@@ -152,7 +155,7 @@ class SecretMaskingFormatter(logging.Formatter):
 class RichCLIHandler(RichHandler):
     """Custom Rich handler for CLI applications with filtered output."""
 
-    def __init__(self, console: Console | None = None, **kwargs):
+    def __init__(self, console: Console | None = None, **kwargs: Any) -> None:
         if console is None:
             console = get_console()
 
@@ -165,7 +168,7 @@ class RichCLIHandler(RichHandler):
             **kwargs,
         )
 
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         """Filter console output to show only important messages."""
         # Always show ERROR and CRITICAL
         if record.levelno >= logging.ERROR:
@@ -232,7 +235,13 @@ class RichCLIHandler(RichHandler):
 class DetailedFileHandler(logging.FileHandler):
     """File handler for detailed logging with full context and secret masking."""
 
-    def __init__(self, filename, mode="a", encoding=None, delay=False):
+    def __init__(
+        self,
+        filename: str | Path,
+        mode: str = "a",
+        encoding: str | None = None,
+        delay: bool = False,
+    ) -> None:
         super().__init__(filename, mode, encoding, delay)
 
         # Detailed formatter for file output with secret masking
@@ -289,6 +298,7 @@ def setup_logging(
     logger.handlers.clear()
 
     # Console handler with Rich formatting and filtered output
+    console_handler: RichCLIHandler | logging.StreamHandler
     if enable_rich:
         console_handler = RichCLIHandler()
         console_handler.setLevel(getattr(logging, console_level.upper()))
@@ -338,7 +348,10 @@ def mask_sensitive_data(data: str) -> str:
 
 
 def log_sensitive_data_safely(
-    logger, level: str, message: str, sensitive_data: dict | None = None
+    logger: logging.Logger,
+    level: str,
+    message: str,
+    sensitive_data: dict[str, object] | None = None,
 ) -> None:
     """Safely log messages that might contain sensitive data.
 
@@ -360,9 +373,9 @@ def log_sensitive_data_safely(
     log_method(full_message)
 
 
-def _mask_sensitive_dict(data: dict) -> dict:
+def _mask_sensitive_dict(data: dict[str, object]) -> dict[str, object]:
     """Recursively mask sensitive data in dictionaries."""
-    safe_data = {}
+    safe_data: dict[str, object] = {}
     sensitive_keys = {
         "api_key",
         "access_token",

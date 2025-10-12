@@ -48,19 +48,23 @@ classifiers = [
 
 [dependency-groups]
 dev = [
-    "pytest>=7.2.0",
+    "pytest>=8.4.1",
     "pytest-xdist>=3.0.0",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.12.4",
+    "mypy>=1.18.2",
     "pre-commit>=2.20.0",
     "tox-uv>=1.11.3",
-    "mypy>=0.991",
-    "pytest-cov>=4.0.0",
-    "ruff>=0.12.4",
     "pyright>=1.1.0",
     "pytest-mock>=3.10.0",
     "pytest-asyncio>=0.21.0",
     "python-semantic-release>=8.0.0",
-    "commitizen>=3.0.0"
-    ]
+    "commitizen>=3.0.0",
+    "types-requests>=2.32.4.20250913",
+    "types-pyyaml>=6.0.12.20250915",
+    "types-pytz>=2025.2.0.20250809",
+    "types-setuptools>=80.9.0.20250822",
+]
 
     [project.scripts]
     bank-importer-th = "bank_importer_th.cli_main:app"
@@ -80,48 +84,58 @@ firefly-iii-api-client = { git = "https://github.com/jochemvangrondelle/firefly-
 
 [tool.uv-dynamic-versioning]
 fallback-version = "0.0.0"
-
 [tool.mypy]
-files                       = ["src"]
-exclude                     = ["src/submodules/firefly-iii-client/build"]
-disallow_untyped_defs       = true
-disallow_any_unimported     = true
-no_implicit_optional        = true
-check_untyped_defs          = true
-warn_return_any             = true
-warn_unused_ignores         = true
-show_error_codes            = true
-strict_equality             = true
-warn_redundant_casts        = true
-warn_unused_configs         = true
-warn_no_return              = true
-warn_unreachable            = true
+exclude = [
+    "src/submodules/firefly-iii-client/build",
+    "src/submodules/firefly-iii-client/firefly_iii_client/*",
+    "src/submodules/import-configurations",
+    "src/submodules/firefly-iii-client/test/*",
+]
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_no_return = true
+warn_unreachable = true
 disallow_untyped_decorators = true
-disallow_incomplete_defs    = true
-disallow_untyped_calls      = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
 
     [[tool.mypy.overrides]]
     module                 = "firefly_iii_client.*"
     ignore_missing_imports = true
 
 [tool.pyright]
-include                      = ["src"]
-exclude                      = ["tests", "venv", ".venv"]
-typeCheckingMode             = "strict"
-useLibraryCodeForTypes       = true
-reportMissingImports         = true
-reportMissingTypeStubs       = false
-reportUnusedImport           = true
-reportUnusedClass            = true
-reportUnusedFunction         = true
-reportUnusedVariable         = true
-reportDuplicateImport        = true
-reportOptionalSubscript      = true
-reportOptionalMemberAccess   = true
-reportOptionalCall           = true
-reportOptionalIterable       = true
+include = ["src"]
+exclude = [
+    "tests",
+    "venv",
+    ".venv",
+    "src/submodules/firefly-iii-client/build",
+    "src/submodules/firefly-iii-client/firefly_iii_client",
+    "src/submodules/import-configurations",
+]
+typeCheckingMode = "strict"
+useLibraryCodeForTypes = true
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedClass = true
+reportUnusedFunction = true
+reportUnusedVariable = true
+reportDuplicateImport = true
+reportOptionalSubscript = true
+reportOptionalMemberAccess = true
+reportOptionalCall = true
+reportOptionalIterable = true
 reportOptionalContextManager = true
-reportOptionalOperand        = true
+reportOptionalOperand = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -170,7 +184,7 @@ exclude        = ["__pycache__", ".git", ".venv", "venv", ".env", "src/submodule
 
 [tool.black]
 target-version = ['py311']
-line-length = 88
+line-length    = 88
 
 [tool.isort]
 profile           = "black"
@@ -196,7 +210,7 @@ exclude_lines = [
     "logger\\.debug\\(",
     "logging\\.debug\\(",
 ]
-omit   = ["*/tests/*", "*/test_*.py"]
+omit = ["*/tests/*", "*/test_*.py"]
 
 [tool.coverage.run]
 source = ["src"]
@@ -256,5 +270,6 @@ version                  = "1.0.0"
 tag_format               = "v$version"
 version_scheme           = "pep440"
 version_provider         = "semantic-release"
+files                    = ["src"]
 update_changelog_on_bump = true
 major_version_zero       = true
