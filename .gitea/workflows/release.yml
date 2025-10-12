@@ -59,10 +59,10 @@ jobs:
           if [ -d "src/submodules/firefly-iii-client" ]; then
             echo "Firefly III client submodule found"
             ls -la src/submodules/firefly-iii-client/
-            if [ -f "src/submodules/firefly-iii-client/pyproject.toml" ]; then
-              echo "✅ pyproject.toml found in firefly-iii-client"
+            if [ -f "src/submodules/firefly-iii-client/setup.py" ]; then
+              echo "✅ setup.py found in firefly-iii-client"
             else
-              echo "❌ pyproject.toml NOT found in firefly-iii-client"
+              echo "❌ setup.py NOT found in firefly-iii-client"
               exit 1
             fi
           else
