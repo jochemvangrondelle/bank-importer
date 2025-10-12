@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from ..interfaces.parser import Parser
 from ..models.transaction import Transaction
@@ -18,7 +18,7 @@ class GenericJsonParser(Parser):
         """Get the bank type identifier for this parser."""
         return "generic"
 
-    def get_export_config(self) -> Dict[str, Any]:
+    def get_export_config(self) -> dict[str, Any]:
         """Get export configuration specific to this parser."""
         return {
             "bank_name": "Generic Bank",

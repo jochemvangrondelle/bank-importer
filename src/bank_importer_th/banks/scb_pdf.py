@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pdfplumber
 import pytz
@@ -21,7 +21,7 @@ class ScbPdfParser(Parser):
         """Get the bank type identifier for this parser."""
         return "scb"
 
-    def get_export_config(self) -> Dict[str, Any]:
+    def get_export_config(self) -> dict[str, Any]:
         """Get export configuration specific to this parser."""
         return {
             "bank_name": "Siam Commercial Bank",

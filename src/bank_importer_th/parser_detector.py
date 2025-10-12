@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .banks import (
     AmexThCsvParser,
@@ -33,8 +33,8 @@ class ParserDetector:
         self.logger = logging.getLogger(__name__)
 
     def detect_parser(
-        self, file_path: Path, parent_folder_hint: Optional[str] = None
-    ) -> Optional[str]:
+        self, file_path: Path, parent_folder_hint: str | None = None
+    ) -> str | None:
         """
         Detect the best parser for a given file using a multi-step validation process.
 
@@ -94,9 +94,9 @@ class ParserDetector:
         self.logger.warning(f"No suitable parser found for file: {file_path}")
         return None
 
-    def _get_parsers_by_extension(self, file_extension: str) -> List[str]:
+    def _get_parsers_by_extension(self, file_extension: str) -> list[str]:
         """Get parsers that support the given file extension."""
-        candidates: List[str] = []
+        candidates: list[str] = []
         for parser_name, parser in self.parsers.items():
             supported_extensions = parser.get_supported_extensions()
             if file_extension in supported_extensions:
@@ -104,11 +104,11 @@ class ParserDetector:
         return candidates
 
     def _get_parsers_by_filename_pattern(
-        self, file_path: Path, extension_candidates: List[str]
-    ) -> List[str]:
+        self, file_path: Path, extension_candidates: list[str]
+    ) -> list[str]:
         """Filter parsers by filename patterns if available."""
         filename = file_path.name
-        candidates: List[str] = []
+        candidates: list[str] = []
 
         for parser_name in extension_candidates:
             parser = self.parsers[parser_name]
@@ -134,12 +134,12 @@ class ParserDetector:
         return fnmatch.fnmatch(filename.lower(), pattern.lower())
 
     def _prioritize_by_folder_hint(
-        self, candidates: List[str], folder_hint: str
-    ) -> List[str]:
+        self, candidates: list[str], folder_hint: str
+    ) -> list[str]:
         """Prioritize parsers based on folder hint."""
         folder_hint_lower = folder_hint.lower()
-        prioritized: List[str] = []
-        others: List[str] = []
+        prioritized: list[str] = []
+        others: list[str] = []
 
         for parser_name in candidates:
             parser = self.parsers[parser_name]
@@ -239,7 +239,7 @@ class ParserDetector:
     def _validate_csv_content(self, parser: Parser, file_path: Path) -> bool:
         """Validate CSV content by checking headers."""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 first_line = f.readline().strip()
 
                 if not first_line:
@@ -263,7 +263,7 @@ class ParserDetector:
             self.logger.debug(f"Could not validate CSV content for {file_path}: {e}")
             return True
 
-    def get_parser(self, parser_name: str) -> Optional[Parser]:
+    def get_parser(self, parser_name: str) -> Parser | None:
         """
         Get a parser instance by name.
 
@@ -275,7 +275,7 @@ class ParserDetector:
         """
         return self.parsers.get(parser_name)
 
-    def list_available_parsers(self) -> List[str]:
+    def list_available_parsers(self) -> list[str]:
         """
         Get a list of available parser names.
 
@@ -284,7 +284,7 @@ class ParserDetector:
         """
         return list(self.parsers.keys())
 
-    def get_parser_info(self, parser_name: str) -> Optional[Dict[str, Any]]:
+    def get_parser_info(self, parser_name: str) -> dict[str, Any] | None:
         """
         Get information about a parser.
 

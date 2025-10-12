@@ -8,8 +8,8 @@ from .interfaces.target import Target, TargetResult
 from .logging_config import get_logger
 from .models.database import DatabaseManager
 from .targets.csv_target import CsvTarget
-from .targets.yaml_target import YamlTarget
 from .targets.firefly_target import FireflyTarget
+from .targets.yaml_target import YamlTarget
 
 
 class TargetManager:

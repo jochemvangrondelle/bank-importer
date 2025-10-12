@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from ..interfaces.parser import Parser
 from ..models.transaction import Transaction
@@ -130,7 +130,7 @@ class AmexThCsvParser(Parser):
                         continue
 
         except Exception as e:
-            raise ValueError(f"Error parsing Amex CSV file {file_path}: {e}")
+            raise ValueError(f"Error parsing Amex CSV file {file_path}: {e}") from e
 
     def _parse_row(
         self,
@@ -476,7 +476,7 @@ class AmexThCsvParser(Parser):
         """Get the bank type identifier for this parser."""
         return "amex_th"
 
-    def get_export_config(self) -> Dict[str, Any]:
+    def get_export_config(self) -> dict[str, Any]:
         """Get export configuration specific to this parser."""
         return {
             "bank_name": "American Express Thailand",

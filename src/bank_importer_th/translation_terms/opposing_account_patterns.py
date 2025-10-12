@@ -1,7 +1,6 @@
 """Patterns for extracting opposing account information from transaction descriptions."""
 
 import re
-from typing import Tuple
 
 # Thai financial terms to remove when extracting opposing account names
 THAI_FINANCIAL_TERMS = [
@@ -83,7 +82,7 @@ PERSON_NAME_SUFFIXES = [
 ]
 
 
-def extract_opposing_account(description: str) -> Tuple[str, str]:
+def extract_opposing_account(description: str) -> tuple[str, str]:
     """
     Extract opposing account name and number from transaction description.
 

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from ..models.transaction import Transaction
 
@@ -27,7 +27,7 @@ class Parser(ABC):
         """Get the bank type identifier for this parser."""
         raise NotImplementedError("Subclasses must implement get_bank_type()")
 
-    def get_export_config(self) -> Dict[str, Any]:
+    def get_export_config(self) -> dict[str, Any]:
         """Get export configuration specific to this parser."""
         raise NotImplementedError("Subclasses must implement get_export_config()")
 

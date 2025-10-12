@@ -194,7 +194,7 @@ def status(
                 if transactions_in_session:
                     for transaction in transactions_in_session:
                         amount = transaction.get("amount", 0)
-                        if isinstance(amount, (int, float)):
+                        if isinstance(amount, int | float):
                             if amount < 0:
                                 expense_amount += abs(amount)
                             elif amount > 0:
@@ -210,8 +210,8 @@ def status(
                         max_date = max(dates)[:10]  # Just the date part
 
                         # Calculate the last date of the month being covered
-                        from datetime import datetime, timedelta
                         from calendar import monthrange
+                        from datetime import datetime, timedelta
 
                         max_date_obj = datetime.strptime(max_date, "%Y-%m-%d")
                         # Get the last day of the current month (the month being covered)
@@ -272,7 +272,7 @@ def status(
 
                 for transaction in all_transactions:
                     amount = transaction.get("amount", 0)
-                    if isinstance(amount, (int, float)):
+                    if isinstance(amount, int | float):
                         if amount < 0:
                             consolidated_expense_amount += abs(amount)
                         elif amount > 0:
@@ -284,8 +284,8 @@ def status(
                     consolidated_max_date = max(dates)[:10]
 
                     # Calculate the last date of the month being covered
-                    from datetime import datetime
                     from calendar import monthrange
+                    from datetime import datetime
 
                     max_date_obj = datetime.strptime(consolidated_max_date, "%Y-%m-%d")
                     last_day_current_month = monthrange(

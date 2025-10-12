@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pdfplumber
 import pytz
@@ -21,7 +21,7 @@ class KrungsriPdfParser(Parser):
         """Get the bank type identifier for this parser."""
         return "krungsri"
 
-    def get_export_config(self) -> Dict[str, Any]:
+    def get_export_config(self) -> dict[str, Any]:
         """Get export configuration specific to this parser."""
         return {
             "bank_name": "Krungsri Bank",
@@ -234,10 +234,11 @@ class KrungsriPdfParser(Parser):
             if len(amounts) < 2:
                 return None
 
-            # Format: Date/Time Transaction Type Amount Balance Channel Description
-            # amounts[0] = transaction amount, amounts[1] = balance
+            # Format: Date/Time Transaction Type Amount OldBalance NewBalance Channel Description
+            # amounts[0] = transaction amount, amounts[1] = old balance, amounts[2] = new balance
             amount_str = amounts[0].replace(",", "")
-            balance_str = amounts[1].replace(",", "")
+            # Use the last amount as the new balance (current balance after transaction)
+            balance_str = amounts[-1].replace(",", "")
 
             amount = Decimal(amount_str)
             balance = Decimal(balance_str)

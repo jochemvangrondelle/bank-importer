@@ -675,7 +675,7 @@ wheels = [
 
 [[package]]
 name = "firefly-iii-api-client"
-version = "6.2.10.0"
+version = "6.4.0.0"
 source = { directory = "src/submodules/firefly-iii-client" }
 dependencies = [
     { name = "pydantic" },

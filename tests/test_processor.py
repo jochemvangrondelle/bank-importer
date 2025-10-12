@@ -211,7 +211,8 @@ file_path = "test/path"
         """Test getting Krungsri text parser."""
         parser = processor._get_parser("krungsri_text")
         assert parser is not None
-        assert isinstance(parser, processor.parsers["krungsri_text"].__class__)
+        # Check that it's the correct parser type by checking the class name
+        assert parser.__class__.__name__ == "KrungsriTextParser"
 
     @pytest.mark.processor
     def test_get_parser_unknown(self, processor: Processor) -> None:

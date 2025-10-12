@@ -1,12 +1,11 @@
 """Common CLI parameters and utilities for reducing code duplication."""
 
 import typer
-from typing import List, Optional
 
-from .models.database import DatabaseManager
-from .processor import Processor
 from .config import ConfigManager
 from .logging_config import get_console
+from .models.database import DatabaseManager
+from .processor import Processor
 
 # Common CLI parameter definitions for reuse
 CONFIG_FILE_PARAM = typer.Option(
@@ -28,7 +27,7 @@ OUTPUT_PARAM = typer.Option(
 )
 
 
-def get_available_accounts() -> List[str]:
+def get_available_accounts() -> list[str]:
     """Get list of available account names from config."""
     try:
         config_manager = ConfigManager()
@@ -40,8 +39,8 @@ def get_available_accounts() -> List[str]:
 
 
 def _validate_account(
-    ctx: typer.Context, param: typer.CallbackParam, value: Optional[str]
-) -> Optional[str]:
+    ctx: typer.Context, param: typer.CallbackParam, value: str | None
+) -> str | None:
     """Validate account parameter and provide suggestions if invalid."""
     if value is None:
         return value
@@ -78,8 +77,8 @@ def _validate_account(
 
 
 def _autocomplete_accounts(
-    ctx: typer.Context, args: List[str], incomplete: str
-) -> List[str]:
+    ctx: typer.Context, args: list[str], incomplete: str
+) -> list[str]:
     """Autocomplete function for account names."""
     available_accounts = get_available_accounts()
     return [account for account in available_accounts if account.startswith(incomplete)]

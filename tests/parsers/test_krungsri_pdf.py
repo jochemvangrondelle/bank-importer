@@ -3,6 +3,7 @@
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 import pytz
@@ -10,7 +11,6 @@ import pytz
 from bank_importer_th.banks.krungsri_pdf import KrungsriPdfParser
 from bank_importer_th.models.transaction import Transaction
 from tests.parsers.test_base import BaseParserTest
-from unittest.mock import patch, Mock
 
 
 class TestKrungsriPdfParser(BaseParserTest):
@@ -230,7 +230,7 @@ class TestKrungsriPdfParser(BaseParserTest):
             )
 
             # Extract unique channels
-            channels = list(set(tx.channel for tx in transactions if tx.channel))
+            channels = {tx.channel for tx in transactions if tx.channel}
 
             # Should have at least one channel
             assert len(channels) > 0
@@ -604,7 +604,7 @@ class TestKrungsriPdfParser(BaseParserTest):
                 reconstructed_transaction = Transaction.from_dict(transaction_dict)
                 # If successful, verify timezone is preserved
                 assert reconstructed_transaction.date.tzinfo is not None
-            except ValueError as e:
+            except ValueError:
                 # If it fails due to missing fields, that's acceptable
                 # The important thing is that the original transaction has timezone info
                 assert transaction.date.tzinfo is not None

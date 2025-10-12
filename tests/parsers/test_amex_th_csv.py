@@ -8,7 +8,6 @@ from typing import Any
 import pytest
 
 from bank_importer_th.banks.amex_th_csv import AmexThCsvParser
-from bank_importer_th.models.transaction import Transaction
 
 
 class TestAmexThCsvParser:
@@ -72,7 +71,10 @@ class TestAmexThCsvParser:
 
         # Check first transaction (SHOPEE TH)
         first_txn = transactions[0]
-        assert first_txn.description == "SHOPEE TH"
+        assert (
+            first_txn.description
+            == "SHOPEE TH (89 AIA CAPITAL CENTER 24FL.RATCHADAPISEK RD. DINDAENGDINDAENG BANGKOKBANGKOK, THAILAND)"
+        )
         assert first_txn.amount == -3397.00  # Negated for Firefly-III format
         assert first_txn.currency == "THB"
         assert first_txn.account_number == "XXXX-XXXXXX-43002"
@@ -84,7 +86,9 @@ class TestAmexThCsvParser:
 
         # Check foreign currency transaction
         grab_txn = next(t for t in transactions if "GRAB" in t.description)
-        assert grab_txn.amount == 504.00  # Should be positive (spending)
+        assert (
+            grab_txn.amount == -504.00
+        )  # Should be negative (expense in Firefly-III format)
         assert grab_txn.foreign_currency == "THB"
         assert grab_txn.foreign_amount == Decimal("504.00")
         assert "SINGAPORE" in grab_txn.description
@@ -137,7 +141,7 @@ class TestAmexThCsvParser:
         # Find GRAB transaction with foreign currency
         grab_txn = next(t for t in transactions if "GRAB" in t.description)
 
-        assert grab_txn.amount > 0  # Should be positive (spending)
+        assert grab_txn.amount < 0  # Should be negative (expense in Firefly-III format)
         assert grab_txn.foreign_currency == "THB"
         assert grab_txn.foreign_amount == Decimal("504.00")
         assert "SINGAPORE" in grab_txn.description

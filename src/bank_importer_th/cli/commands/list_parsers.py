@@ -106,9 +106,9 @@ def list_parsers(
     console.print(f"🔧 Generic: {generic}")
 
     # Print usage hints
-    console.print(f"\n💡 Usage:")
+    console.print("\n💡 Usage:")
     console.print(
-        f"  • Use 'bank-importer-th import-files <file>' to auto-detect parser"
+        "  • Use 'bank-importer-th import-files <file>' to auto-detect parser"
     )
-    console.print(f"  • Configure parsers in config.toml for specific accounts")
-    console.print(f"  • Generic parsers work with most standard formats")
+    console.print("  • Configure parsers in config.toml for specific accounts")
+    console.print("  • Generic parsers work with most standard formats")

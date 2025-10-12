@@ -5,15 +5,6 @@ from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 
-from .banks import (
-    AmexThCsvParser,
-    GenericCsvParser,
-    GenericFixedWidthParser,
-    GenericJsonParser,
-    KrungsriPdfParser,
-    KrungsriTextParser,
-    ScbPdfParser,
-)
 from .config import ConfigManager
 from .interfaces.parser import Parser
 from .models.database import DatabaseManager
@@ -79,9 +70,8 @@ class Processor:
 
         try:
             if parser_name:
-                parser = self._get_parser(parser_name)
-            else:
-                parser = None  # Will be detected per file
+                self._get_parser(parser_name)
+            # else: Will be detected per file
         except ValueError as e:
             self.logger.exception("Parser error for account '%s'", account_name)
             yield {
@@ -318,18 +308,18 @@ class Processor:
 
         try:
             # Use account-specific settings or fall back to global settings
-            source_language = translation_config.get(
-                "source_language",
-                self.config_manager.config.get("translation", {}).get(
-                    "default_source_language", "th"
-                ),
-            )
-            target_language = translation_config.get(
-                "target_language",
-                self.config_manager.config.get("translation", {}).get(
-                    "default_target_language", "en"
-                ),
-            )
+            # source_language = translation_config.get(
+            #     "source_language",
+            #     self.config_manager.config.get("translation", {}).get(
+            #         "default_source_language", "th"
+            #     ),
+            # )
+            # target_language = translation_config.get(
+            #     "target_language",
+            #     self.config_manager.config.get("translation", {}).get(
+            #         "default_target_language", "en"
+            #     ),
+            # )
 
             use_term_mapping = translation_config.get("use_term_mapping", True)
             use_api_translation = translation_config.get("use_api_translation", True)

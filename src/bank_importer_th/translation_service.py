@@ -20,7 +20,7 @@ except ImportError:
     DEEP_TRANSLATOR_AVAILABLE = False
 
 try:
-    from googletrans import Translator
+    from googletrans import Translator  # noqa: F401
 
     GOOGLETRANS_AVAILABLE = True
 except ImportError:
