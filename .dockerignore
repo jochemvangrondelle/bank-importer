@@ -76,4 +76,4 @@ test_*
 .pytest_cache/
 htmlcov/
 .coverage
-.tox/ 
+.tox/

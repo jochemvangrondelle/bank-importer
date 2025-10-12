@@ -8,4 +8,4 @@ Date/Time Transaction Withdrawal/Deposit Outstanding Balance Channel Description
 01/07/2024 12:40:50 Fee Debit 50.00 59,600.00 FEE Monthly Account Fee
 01/08/2024 15:55:25 Transfer Credit 3,000.00 62,600.00 IB Transfer from Account 111-222-333
 01/09/2024 09:10:40 ATM Withdrawal 1,000.00 61,600.00 ATM ATM Withdrawal
-01/10/2024 14:35:15 Payment Debit 1,200.00 60,400.00 POS Payment at Restaurant 
+01/10/2024 14:35:15 Payment Debit 1,200.00 60,400.00 POS Payment at Restaurant

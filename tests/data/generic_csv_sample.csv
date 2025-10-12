@@ -8,4 +8,4 @@ date,description,amount,currency,balance,transaction_type,channel,reference
 2024-01-07,Monthly Account Fee,-50.00,THB,59600.00,debit,FEE,FEE001
 2024-01-08,Transfer from Account,3000.00,THB,62600.00,credit,IB,TRF003
 2024-01-09,ATM Withdrawal,-1000.00,THB,61600.00,debit,ATM,ATM002
-2024-01-10,Payment at Restaurant,-1200.00,THB,60400.00,debit,POS,PAY002 
+2024-01-10,Payment at Restaurant,-1200.00,THB,60400.00,debit,POS,PAY002

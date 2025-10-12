@@ -3,4 +3,3 @@ Date/Time Transaction Withdrawal/Deposit Outstanding Balance Channel Description
 01/01/2024 09:30:15 ATM Withdrawal 5,000.00 45,000.00 ATM ATM Withdrawal
 
 01/02/2024 14:20:30 Transfer Credit 10,000.00 55,000.00 IB Transfer from Account
-
