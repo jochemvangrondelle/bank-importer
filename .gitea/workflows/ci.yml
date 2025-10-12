@@ -31,9 +31,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install uv
-        uses: git.jochempiya.org/astral-sh/setup-uv@v4
-        with:
-          version: "latest"
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Verify uv installation
         run: uv --version
@@ -62,9 +62,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install uv
-        uses: git.jochempiya.org/astral-sh/setup-uv@v4
-        with:
-          version: "latest"
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Verify uv installation
         run: uv --version
@@ -94,9 +94,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install uv
-        uses: git.jochempiya.org/astral-sh/setup-uv@v4
-        with:
-          version: "latest"
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Verify uv installation
         run: uv --version
