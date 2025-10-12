@@ -45,6 +45,13 @@ jobs:
         with:
           version: "latest"
 
+      - name: Initialize submodules
+        run: |
+          echo "Initializing submodules..."
+          git submodule init
+          git submodule update --recursive
+          echo "Submodules initialized"
+
       - name: Verify submodules
         run: |
           echo "Checking submodules..."
@@ -52,6 +59,12 @@ jobs:
           if [ -d "src/submodules/firefly-iii-client" ]; then
             echo "Firefly III client submodule found"
             ls -la src/submodules/firefly-iii-client/
+            if [ -f "src/submodules/firefly-iii-client/pyproject.toml" ]; then
+              echo "✅ pyproject.toml found in firefly-iii-client"
+            else
+              echo "❌ pyproject.toml NOT found in firefly-iii-client"
+              exit 1
+            fi
           else
             echo "ERROR: Firefly III client submodule not found"
             exit 1
