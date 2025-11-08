@@ -1,0 +1,49 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e6]:
+    - generic [ref=e7]:
+      - link "Refine Project" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e10]:
+          - img [ref=e13]
+          - heading "Refine Project" [level=1] [ref=e17]
+      - menu [ref=e18]:
+        - menuitem "🏠 Home" [ref=e19] [cursor=pointer]:
+          - text: 🏠
+          - link "Home" [ref=e21]:
+            - /url: /home
+        - menuitem "📥 Import" [ref=e22] [cursor=pointer]:
+          - text: 📥
+          - link "Import" [ref=e24]:
+            - /url: /import
+        - menuitem "📊 Status" [ref=e25] [cursor=pointer]:
+          - text: 📊
+          - link "Status" [ref=e27]:
+            - /url: /status
+    - button "left" [ref=e29] [cursor=pointer]:
+      - img "left" [ref=e30]:
+        - img [ref=e31]
+  - main [ref=e34]:
+    - generic [ref=e37]:
+      - generic [ref=e41]:
+        - heading "Welcome to Bank Importer TH" [level=2] [ref=e43]
+        - generic [ref=e45]: A web-based interface for importing and managing bank transactions.
+        - generic [ref=e47]:
+          - strong [ref=e48]: "Status:"
+          - text: Foundation setup complete. Ready for feature development.
+        - generic [ref=e50]:
+          - button "Start Import Wizard" [ref=e52] [cursor=pointer]:
+            - generic [ref=e53]: Start Import Wizard
+          - button "View Status" [ref=e55] [cursor=pointer]:
+            - generic [ref=e56]: View Status
+      - generic [ref=e58]:
+        - generic [ref=e61]: Quick Links
+        - generic [ref=e63]:
+          - 'button "📥 Import Wizard: Upload and parse bank statements" [ref=e66] [cursor=pointer]':
+            - generic [ref=e67]: "📥 Import Wizard: Upload and parse bank statements"
+          - generic [ref=e69]: "• Configuration: Manage accounts and settings (Coming soon)"
+          - 'button "📊 Status: View account status and transaction statistics" [ref=e72] [cursor=pointer]':
+            - generic [ref=e73]: "📊 Status: View account status and transaction statistics"
+```

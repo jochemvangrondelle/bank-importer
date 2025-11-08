@@ -1,0 +1,77 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e6]:
+    - generic [ref=e7]:
+      - link "Refine Project" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e10]:
+          - img [ref=e13]
+          - heading "Refine Project" [level=1] [ref=e17]
+      - menu [ref=e18]:
+        - menuitem "🏠 Home" [ref=e19] [cursor=pointer]:
+          - text: 🏠
+          - link "Home" [ref=e21]:
+            - /url: /home
+        - menuitem "📥 Import" [ref=e22] [cursor=pointer]:
+          - text: 📥
+          - link "Import" [ref=e24]:
+            - /url: /import
+        - menuitem "💳 Transactions" [ref=e25] [cursor=pointer]:
+          - text: 💳
+          - link "Transactions" [ref=e27]:
+            - /url: /transactions
+        - menuitem "📤 Export" [ref=e28] [cursor=pointer]:
+          - text: 📤
+          - link "Export" [ref=e30]:
+            - /url: /export
+        - menuitem "📊 Status" [ref=e31] [cursor=pointer]:
+          - text: 📊
+          - link "Status" [ref=e33]:
+            - /url: /status
+        - menuitem "⚙️ Configuration" [ref=e34] [cursor=pointer]:
+          - text: ⚙️
+          - link "Configuration" [ref=e36]:
+            - /url: /configuration
+        - menuitem "🚀 Run Pipeline" [ref=e37] [cursor=pointer]:
+          - text: 🚀
+          - link "Run Pipeline" [ref=e39]:
+            - /url: /pipeline
+        - menuitem "🌐 Translation" [ref=e40] [cursor=pointer]:
+          - text: 🌐
+          - link "Translation" [ref=e42]:
+            - /url: /translation
+        - menuitem "🗄️ Database" [ref=e43] [cursor=pointer]:
+          - text: 🗄️
+          - link "Database" [ref=e45]:
+            - /url: /database
+        - menuitem "📄 Parsers" [ref=e46] [cursor=pointer]:
+          - text: 📄
+          - link "Parsers" [ref=e48]:
+            - /url: /parsers
+    - button "left" [ref=e50] [cursor=pointer]:
+      - img "left" [ref=e51]:
+        - img [ref=e52]
+  - main [ref=e55]:
+    - generic [ref=e58]:
+      - generic [ref=e62]:
+        - heading "Welcome to Bank Importer TH" [level=2] [ref=e64]
+        - generic [ref=e66]: A web-based interface for importing and managing bank transactions.
+        - generic [ref=e68]:
+          - strong [ref=e69]: "Status:"
+          - text: Foundation setup complete. Ready for feature development.
+        - generic [ref=e71]:
+          - button "Start Import Wizard" [ref=e73] [cursor=pointer]:
+            - generic [ref=e74]: Start Import Wizard
+          - button "View Status" [ref=e76] [cursor=pointer]:
+            - generic [ref=e77]: View Status
+      - generic [ref=e79]:
+        - generic [ref=e82]: Quick Links
+        - generic [ref=e84]:
+          - 'button "📥 Import Wizard: Upload and parse bank statements" [ref=e87] [cursor=pointer]':
+            - generic [ref=e88]: "📥 Import Wizard: Upload and parse bank statements"
+          - generic [ref=e90]: "• Configuration: Manage accounts and settings (Coming soon)"
+          - 'button "📊 Status: View account status and transaction statistics" [ref=e93] [cursor=pointer]':
+            - generic [ref=e94]: "📊 Status: View account status and transaction statistics"
+```

@@ -1,0 +1,90 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e6]:
+    - generic [ref=e7]:
+      - link "Refine Project" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e10]:
+          - img [ref=e13]
+          - heading "Refine Project" [level=1] [ref=e17]
+      - menu [ref=e18]:
+        - menuitem "🏠 Home" [ref=e19] [cursor=pointer]:
+          - text: 🏠
+          - link "Home" [ref=e21]:
+            - /url: /home
+        - menuitem "📥 Import" [ref=e22] [cursor=pointer]:
+          - text: 📥
+          - link "Import" [ref=e24]:
+            - /url: /import
+        - menuitem "💳 Transactions" [ref=e25] [cursor=pointer]:
+          - text: 💳
+          - link "Transactions" [ref=e27]:
+            - /url: /transactions
+        - menuitem "📤 Export" [ref=e28] [cursor=pointer]:
+          - text: 📤
+          - link "Export" [ref=e30]:
+            - /url: /export
+        - menuitem "📊 Status" [ref=e31] [cursor=pointer]:
+          - text: 📊
+          - link "Status" [ref=e33]:
+            - /url: /status
+        - menuitem "⚙️ Configuration" [ref=e34] [cursor=pointer]:
+          - text: ⚙️
+          - link "Configuration" [ref=e36]:
+            - /url: /configuration
+        - menuitem "🚀 Run Pipeline" [ref=e37] [cursor=pointer]:
+          - text: 🚀
+          - link "Run Pipeline" [ref=e39]:
+            - /url: /pipeline
+        - menuitem "🌐 Translation" [ref=e40] [cursor=pointer]:
+          - text: 🌐
+          - link "Translation" [ref=e42]:
+            - /url: /translation
+        - menuitem "🗄️ Database" [ref=e43] [cursor=pointer]:
+          - text: 🗄️
+          - link "Database" [ref=e45]:
+            - /url: /database
+        - menuitem "📄 Parsers" [ref=e46] [cursor=pointer]:
+          - text: 📄
+          - link "Parsers" [ref=e48]:
+            - /url: /parsers
+    - button "left" [ref=e50] [cursor=pointer]:
+      - img "left" [ref=e51]:
+        - img [ref=e52]
+  - main [ref=e55]:
+    - generic [ref=e58]:
+      - generic [ref=e62]:
+        - heading "Welcome to Bank Importer TH" [level=2] [ref=e64]
+        - generic [ref=e66]: A web-based interface for importing and managing bank transactions.
+        - generic [ref=e68]:
+          - strong [ref=e69]: "Status:"
+          - text: Foundation setup complete. Ready for feature development.
+        - generic [ref=e71]:
+          - button "Start Import Wizard" [ref=e73] [cursor=pointer]:
+            - generic [ref=e74]: Start Import Wizard
+          - button "View Status" [ref=e76] [cursor=pointer]:
+            - generic [ref=e77]: View Status
+      - generic [ref=e79]:
+        - generic [ref=e82]: Quick Links
+        - generic [ref=e84]:
+          - 'button "📥 Import Wizard: Upload and parse bank statements" [ref=e86] [cursor=pointer]':
+            - generic [ref=e87]: "📥 Import Wizard: Upload and parse bank statements"
+          - 'button "💳 Transactions: View and search all transactions" [ref=e89] [cursor=pointer]':
+            - generic [ref=e90]: "💳 Transactions: View and search all transactions"
+          - 'button "📤 Export: Export transactions to CSV/YAML" [ref=e92] [cursor=pointer]':
+            - generic [ref=e93]: "📤 Export: Export transactions to CSV/YAML"
+          - 'button "📊 Status: View account status and transaction statistics" [ref=e95] [cursor=pointer]':
+            - generic [ref=e96]: "📊 Status: View account status and transaction statistics"
+          - 'button "🚀 Run Pipeline: Execute full workflow (import → export)" [ref=e98] [cursor=pointer]':
+            - generic [ref=e99]: "🚀 Run Pipeline: Execute full workflow (import → export)"
+          - 'button "⚙️ Configuration: Manage accounts, targets, and settings" [ref=e101] [cursor=pointer]':
+            - generic [ref=e102]: "⚙️ Configuration: Manage accounts, targets, and settings"
+          - 'button "🌐 Translation: Manage translation service and cache" [ref=e104] [cursor=pointer]':
+            - generic [ref=e105]: "🌐 Translation: Manage translation service and cache"
+          - 'button "🗄️ Database: Initialize, clean, and manage database" [ref=e107] [cursor=pointer]':
+            - generic [ref=e108]: "🗄️ Database: Initialize, clean, and manage database"
+          - 'button "📄 Parsers: View available bank statement parsers" [ref=e110] [cursor=pointer]':
+            - generic [ref=e111]: "📄 Parsers: View available bank statement parsers"
+```
