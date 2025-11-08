@@ -1,0 +1,94 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e6]:
+    - generic [ref=e7]:
+      - link "Refine Project" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e10]:
+          - img [ref=e13]
+          - heading "Refine Project" [level=1] [ref=e17]
+      - menu [ref=e18]:
+        - menuitem "🏠 Home" [ref=e19] [cursor=pointer]:
+          - text: 🏠
+          - link "Home" [ref=e21]:
+            - /url: /home
+        - menuitem "📥 Import" [ref=e22] [cursor=pointer]:
+          - text: 📥
+          - link "Import" [ref=e24]:
+            - /url: /import
+        - menuitem "📊 Status" [ref=e25] [cursor=pointer]:
+          - text: 📊
+          - link "Status" [ref=e27]:
+            - /url: /status
+    - button "left" [ref=e29] [cursor=pointer]:
+      - img "left" [ref=e30]:
+        - img [ref=e31]
+  - main [ref=e34]:
+    - generic [ref=e36]:
+      - heading "Import Wizard" [level=2] [ref=e37]
+      - generic [ref=e38]:
+        - generic [ref=e40]:
+          - img "file-text" [ref=e43]:
+            - img [ref=e44]
+          - generic [ref=e47]: Prepare
+        - generic [ref=e49]:
+          - img "check-circle" [ref=e52]:
+            - img [ref=e53]
+          - generic [ref=e57]: Try Read
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e62]:
+            - generic "Select File" [ref=e64]: "* Select File"
+            - button "upload Select File" [ref=e71] [cursor=pointer]:
+              - img "upload" [ref=e73]:
+                - img [ref=e74]
+              - generic [ref=e76]: Select File
+          - generic [ref=e78]:
+            - generic "Parser" [ref=e80]:
+              - text: Parser
+              - img "question-circle" [ref=e81]:
+                - img [ref=e82]
+            - generic [ref=e88] [cursor=pointer]:
+              - generic [ref=e90]:
+                - combobox "Parser question-circle" [ref=e92]
+                - generic: Select parser or leave empty for auto-detection
+              - generic:
+                - img:
+                  - img
+          - generic [ref=e93]:
+            - generic [ref=e96]:
+              - generic "Account Number" [ref=e98]: "* Account Number"
+              - textbox "* Account Number" [ref=e102]:
+                - /placeholder: Account number
+            - generic [ref=e105]:
+              - generic "Account Name" [ref=e107]: "* Account Name"
+              - textbox "* Account Name" [ref=e111]:
+                - /placeholder: Account name
+          - generic [ref=e112]:
+            - generic [ref=e115]:
+              - generic "Bank Name" [ref=e117]: "* Bank Name"
+              - textbox "* Bank Name" [ref=e121]:
+                - /placeholder: Bank name
+            - generic [ref=e124]:
+              - generic "Currency" [ref=e126]
+              - generic [ref=e130] [cursor=pointer]:
+                - generic [ref=e132]:
+                  - combobox "Currency" [ref=e134]
+                  - generic "THB" [ref=e135]
+                - generic:
+                  - img:
+                    - img
+          - generic [ref=e137]:
+            - generic "Country Code" [ref=e139]
+            - generic [ref=e143] [cursor=pointer]:
+              - generic [ref=e145]:
+                - combobox "Country Code" [ref=e147]
+                - generic "TH" [ref=e148]
+              - generic:
+                - img:
+                  - img
+        - 'button "Next: Try Read" [ref=e151] [cursor=pointer]':
+          - generic [ref=e152]: "Next: Try Read"
+```
