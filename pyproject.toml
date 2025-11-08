@@ -60,6 +60,13 @@ classifiers = [
         "python-semantic-release>=8.0.0",
         "commitizen>=3.0.0",
     ]
+    docs = [
+        "mkdocs>=1.6.0",
+        "mkdocs-material>=9.5.0",
+        "mkdocs-git-revision-date-localized-plugin>=1.2.0",
+        "mkdocs-minify-plugin>=0.7.0",
+        "mkdocstrings[python]>=0.24.0",
+    ]
 
 
     [project.scripts]
@@ -86,6 +93,13 @@ dev = [
     "types-pyyaml>=6.0.12.20250915",
     "types-pytz>=2025.2.0.20250809",
     "types-setuptools>=80.9.0.20250822",
+]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.2.0",
+    "mkdocs-minify-plugin>=0.7.0",
+    "mkdocstrings[python]>=0.24.0",
 ]
 
 [tool.mypy]
