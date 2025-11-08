@@ -165,3 +165,11 @@ translation_cache.json
 config.toml
 .DS_Store
 src/submodules/import-configurations/
+
+# Frontend test results and reports
+frontend/test-results/
+frontend/playwright-report/
+
+# Node modules
+node_modules/
+frontend/node_modules/
