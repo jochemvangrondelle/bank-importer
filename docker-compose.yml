@@ -1,42 +1,227 @@
-version: "3.8"
-
 services:
-  bank-importer:
-    # Use pre-built image from Harbor registry by default
-    image: reg.jochempiya.org/jochem/bank-importer-th:${VERSION:-stable}
+  api:
+    # Use pre-built image from Docker Hub by default
+    image: jochemvangrondelle/bank-importer:${VERSION:-stable}
 
-    # Build configuration (only used with --build flag)
+    # Build configuration (used with docker-compose build or --build flag)
     build:
       context: .
+      dockerfile: Dockerfile
       target: production
       args:
         VERSION: ${VERSION:-latest}
+        # API should only depend on api group, not CLI
+        DEPENDENCY_GROUPS: ${DEPENDENCY_GROUPS:-api}
       tags:
-        - bank-importer-th:${VERSION:-latest}
-        - bank-importer-th:latest
-      platforms:
-        - linux/amd64
-        - linux/arm64
+        - bank-importer:${VERSION:-latest}
+        - bank-importer:latest
+        - jochemvangrondelle/bank-importer:${VERSION:-latest}
+      # Multi-platform builds disabled for local development
+      # platforms:
+      #   - linux/amd64
+      #   - linux/arm64
 
-    container_name: bank-importer-th
+    container_name: bank-importer-api
+    hostname: bank-importer-api
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Environment variables
     environment:
       - APP_VERSION=${VERSION:-latest}
+      - API_HOST=${API_HOST:-0.0.0.0}
+      - API_PORT=${API_PORT:-8000}
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      # Watch mode: set WATCH=true to enable auto-reload
+      - WATCH=${WATCH:-false}
+
+    # Port mapping
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+    # Volume mounts
     volumes:
-      # Mount input directory (bank statements)
-      - ./data/in:/app/data/in:ro
-      # Mount output directory (exports)
-      - ./data/out:/app/data/out
-      # Mount logs directory
+      # Mount data directory - read-write (includes database file, input, and output)
+      # Note: input subdirectory will be mounted as read-only separately if needed
+      - ./data:/app/data
+      # Mount logs directory - read-write
       - ./logs:/app/logs
-      # Mount config file (optional)
+      # Mount config file (optional) - read-only
       - ./config.toml:/app/config.toml:ro
-    # Example usage:
-    # docker-compose run --rm bank-importer import-files data/in/
-    # docker-compose run --rm bank-importer export --target csv
-    # docker-compose run --rm bank-importer status
-    # docker-compose run --rm bank-importer --help
-    # docker-compose run --rm bank-importer version
-    #
-    # Build locally (when needed):
-    # docker-compose build bank-importer
-    # docker-compose up --build bank-importer
+      # Development: mount source for watch mode (only if WATCH=true)
+      - ./src:/app/src:ro
+      - ./api:/app/api:ro
+
+    # Health check configuration
+    # Verifies the health endpoint returns 200 and response contains "healthy" status
+    healthcheck:
+      test:
+        ["CMD-SHELL", 'curl -f http://localhost:8000/api/v1/system/health | grep -q ''"status":"healthy"'' || exit 1']
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+
+    # Security options
+    # Run as non-root user (already set in Dockerfile)
+    # No privileged mode
+    # Read-only root filesystem (except volumes)
+    read_only: false # Set to true if you don't need /tmp writes
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Networks
+    networks:
+      - bank-importer-network
+
+    # Labels for metadata
+    labels:
+      - "com.bank-importer.service=api"
+      - "com.bank-importer.version=${VERSION:-latest}"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./src/frontend/Dockerfile
+      args:
+        - NODE_ENV=${NODE_ENV:-production}
+        - VITE_API_URL=${VITE_API_URL:-/api/v1}
+        - VITE_APP_NAME=${VITE_APP_NAME:-Bank Importer TH}
+        - OPENAPI_SPEC_PATH=./api/openapi.yaml
+
+    container_name: bank-importer-frontend
+    hostname: bank-importer-frontend
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Environment variables
+    environment:
+      - WATCH=${WATCH:-false}
+
+    # Port mapping
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+    # Dependencies
+    depends_on:
+      api:
+        condition: service_healthy
+
+    # Health check configuration
+    # Verifies the frontend page loads successfully (not just HTTP 200, but actual HTML content)
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider -O - http://localhost:3000/ 2>/dev/null | grep -q '<html' || curl -sf http://localhost:3000/ | grep -q '<html' || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+    # Watch mode: mount source code for hot reload (development only)
+    volumes:
+      # Development: mount source for watch mode (only if WATCH=true)
+      - ./src/frontend/src:/app/src:ro
+      - ./src/frontend/public:/app/public:ro
+      - ./api:/app/api:ro
+
+    # Networks
+    networks:
+      - bank-importer-network
+
+    # Labels for metadata
+    labels:
+      - "com.bank-importer.service=frontend"
+      - "com.bank-importer.version=${VERSION:-latest}"
+
+  docs:
+    # Documentation service using MkDocs
+    image: squidfunk/mkdocs-material:latest
+    container_name: bank-importer-docs
+    hostname: bank-importer-docs
+    restart: unless-stopped
+    ports:
+      - "${DOCS_PORT:-8001}:8000"
+    volumes:
+      # Mount docs directory
+      - ./docs:/docs
+      # Mount mkdocs.yml
+      - ./mkdocs.yml:/mkdocs.yml
+      # Mount site output (optional, for persistence)
+      - ./site:/site
+      # Watch mode: mount api directory for OpenAPI spec changes
+      - ./api:/api:ro
+    command: serve --dev-addr=0.0.0.0:8000 --watch-theme
+    # Health check configuration
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:8000/ || curl -f http://localhost:8000/ || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    networks:
+      - bank-importer-network
+    labels:
+      - "com.bank-importer.service=docs"
+      - "com.bank-importer.version=${VERSION:-latest}"
+
+# Networks
+networks:
+  bank-importer-network:
+    driver: bridge
+# Example usage:
+#
+# Build and run:
+#   docker-compose up --build
+#
+# Run in background:
+#   docker-compose up -d
+#
+# View logs:
+#   docker-compose logs -f api
+#   docker-compose logs -f frontend
+#   docker-compose logs -f  # All services
+#
+# Stop:
+#   docker-compose down
+#
+# Run CLI commands:
+#   docker-compose run --rm api cli import-files data/in/
+#   docker-compose run --rm api cli export-multi --target csv
+#   docker-compose run --rm api cli status
+#
+# Access services:
+#   Frontend: http://localhost:3000
+#   API: http://localhost:8000
+#   API Docs: http://localhost:8000/api/v1/docs
+#   Documentation: http://localhost:8001 (docs service)
+#
+# Override environment variables:
+#   API_PORT=9000 FRONTEND_PORT=3001 DOCS_PORT=9001 docker-compose up
+#
+# Build with specific dependency groups:
+#   DEPENDENCY_GROUPS=api docker-compose build

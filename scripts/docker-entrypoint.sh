@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Smart Docker entrypoint for bank-importer-th
+# Smart Docker entrypoint for bank-importer
 # Handles both script name and direct command execution
 
 set -e
@@ -45,11 +45,11 @@ run_app() {
         exit 0
     fi
 
-    # Check if the command is a direct bank-importer-th command
-    if command_exists "bank-importer-th"; then
-        exec bank-importer-th "$@"
+    # Check if the command is a direct bank-importer command
+    if command_exists "bank-importer"; then
+        exec bank-importer "$@"
     else
-        echo "Error: bank-importer-th command not found"
+        echo "Error: bank-importer command not found"
         exit 1
     fi
 }
@@ -69,8 +69,8 @@ main() {
             exit 0
             ;;
         --version|-v|version)
-            if command_exists "bank-importer-th"; then
-                bank-importer-th --version
+            if command_exists "bank-importer"; then
+                bank-importer --version
             else
                 echo "Version: ${APP_VERSION:-unknown}"
             fi

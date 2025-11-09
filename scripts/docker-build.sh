@@ -138,18 +138,18 @@ if [[ "$LOCAL_BUILD" == "true" ]]; then
 fi
 
 # Add tags
-BUILD_CMD="$BUILD_CMD --tag bank-importer-th:$VERSION --tag bank-importer-th:latest"
+BUILD_CMD="$BUILD_CMD --tag bank-importer:$VERSION --tag bank-importer:latest"
 
 # Add Harbor registry tags if pushing
 if [[ "$PUSH" == "true" ]]; then
-    BUILD_CMD="$BUILD_CMD --tag reg.jochempiya.org/jochem/bank-importer-th:$VERSION"
+    BUILD_CMD="$BUILD_CMD --tag reg.jochempiya.org/jochem/bank-importer:$VERSION"
 
     # Add appropriate tag based on version
     if [[ "$VERSION" == *"beta"* || "$VERSION" == *"alpha"* || "$VERSION" == *"rc"* ]]; then
-        BUILD_CMD="$BUILD_CMD --tag reg.jochempiya.org/jochem/bank-importer-th:latest"
+        BUILD_CMD="$BUILD_CMD --tag reg.jochempiya.org/jochem/bank-importer:latest"
         echo -e "${BLUE}Adding 'latest' tag for pre-release version${NC}"
     else
-        BUILD_CMD="$BUILD_CMD --tag reg.jochempiya.org/jochem/bank-importer-th:stable"
+        BUILD_CMD="$BUILD_CMD --tag reg.jochempiya.org/jochem/bank-importer:stable"
         echo -e "${BLUE}Adding 'stable' tag for release version${NC}"
     fi
 fi
@@ -175,12 +175,12 @@ if [[ $? -eq 0 ]]; then
 
     if [[ "$PUSH" == "true" ]]; then
         echo -e "${GREEN}✅ Images pushed to registry:${NC}"
-        echo "  - reg.jochempiya.org/jochem/bank-importer-th:$VERSION"
-        echo "  - reg.jochempiya.org/jochem/bank-importer-th:latest"
+        echo "  - reg.jochempiya.org/jochem/bank-importer:$VERSION"
+        echo "  - reg.jochempiya.org/jochem/bank-importer:latest"
     else
         echo -e "${GREEN}✅ Local images created:${NC}"
-        echo "  - bank-importer-th:$VERSION"
-        echo "  - bank-importer-th:latest"
+        echo "  - bank-importer:$VERSION"
+        echo "  - bank-importer:latest"
     fi
 else
     echo -e "${RED}❌ Build failed!${NC}"
