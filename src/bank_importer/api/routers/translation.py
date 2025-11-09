@@ -33,8 +33,9 @@ async def translate_text_endpoint(
     text: str,
     source_language: Language | None = None,
     target_language: Language | None = None,
-    config: ConfigManager = Depends(get_config_manager),
-    _: dict = Depends(require_auth),
+    *,
+    config: Annotated[ConfigManager, Depends(get_config_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, str]:
     """Translate text."""
     # Get API key from config
@@ -68,7 +69,7 @@ async def translate_text_endpoint(
 @router.delete("/cache", status_code=status.HTTP_204_NO_CONTENT, tags=["Translation"])
 async def clear_translation_cache(
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> None:
     """Clear translation cache."""
     try:
@@ -94,7 +95,7 @@ async def clear_translation_cache(
 @router.get("/cache", tags=["Translation"])
 async def get_translation_cache_stats(
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, Any]:
     """Get translation cache statistics."""
     try:

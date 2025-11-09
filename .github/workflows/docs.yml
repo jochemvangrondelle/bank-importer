@@ -1,0 +1,111 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".readthedocs.yaml"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+      - "CODE_OF_CONDUCT.md"
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".readthedocs.yaml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  # Build documentation locally to verify it works
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for git-revision-date plugin
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --group docs
+
+      - name: Build documentation
+        run: uv run mkdocs build --strict
+
+      - name: Check for broken links
+        run: uv run mkdocs-linkcheck
+
+  # Note: Read the Docs automatically builds when webhooks are configured
+  # To set up automatic builds:
+  # 1. Import project at https://readthedocs.org/dashboard/import/
+  # 2. Connect GitHub account in Read the Docs settings
+  # 3. Webhook will be automatically configured
+  # 4. Documentation will build automatically on push to main/develop
+  #
+  # Read the Docs will automatically:
+  # - Build documentation on every push to main/develop
+  # - Deploy to https://bank-importer.readthedocs.io/
+  # - Build multiple formats (HTML, PDF, EPUB) as configured in .readthedocs.yaml
+  #
+  # This GitHub Actions workflow only VERIFIES the docs build correctly.
+  # The actual deployment happens on Read the Docs servers via webhooks.
+  deploy_gh_pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --group docs
+
+      - name: Build documentation
+        run: uv run mkdocs build --strict
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

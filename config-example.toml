@@ -123,7 +123,7 @@ enabled = true
     external_id_format = "{account_number}_{date}_{transaction_id}"
 
     # Tags and metadata
-    default_tags             = ["imported", "bank-importer-th"]
+    default_tags             = ["imported", "bank-importer"]
     include_parser_tag       = true
     include_balance_info     = true
     include_transaction_type = true

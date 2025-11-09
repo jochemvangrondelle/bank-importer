@@ -106,7 +106,7 @@ class CsvTarget(Target):
                 filename = f"{original_filename}_{timestamp}.csv"
             else:
                 # Clean up source file name for filename
-                source_file = config.get("source_file", "unknown")
+                source_file = config_dict.get("source_file", "unknown")
                 clean_source = self._clean_filename(source_file)
                 filename = f"{clean_source}_{timestamp}.csv"
         else:

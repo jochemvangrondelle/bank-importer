@@ -1,8 +1,8 @@
 # Bank Importer Thailand
 
-[![CI](https://gitea.example.com/jochemvangrondelle/bank-importer-th/actions/workflows/ci.yml/badge.svg)](https://gitea.example.com/jochemvangrondelle/bank-importer-th/actions/workflows/ci.yml)
-[![Release](https://gitea.example.com/jochemvangrondelle/bank-importer-th/actions/workflows/release.yml/badge.svg)](https://gitea.example.com/jochemvangrondelle/bank-importer-th/actions/workflows/release.yml)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://opensource.org/licenses/AGPL-3.0)
+[![CI](https://gitea.example.com/jochemvangrondelle/bank-importer/actions/workflows/ci.yml/badge.svg)](https://gitea.example.com/jochemvangrondelle/bank-importer/actions/workflows/ci.yml)
+[![Release](https://gitea.example.com/jochemvangrondelle/bank-importer/actions/workflows/release.yml/badge.svg)](https://gitea.example.com/jochemvangrondelle/bank-importer/actions/workflows/release.yml)
+[![License: PolyForm-Noncommercial-1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-available-blue.svg)](https://hub.docker.com/)
 
@@ -100,18 +100,18 @@ The application exports to CSV format optimized for Firefly-III's import system,
 
 ```bash
 # Install from PyPI
-pip install bank-importer-th
+pip install bank-importer
 
 # Or with uv
-uv add bank-importer-th
+uv add bank-importer
 ```
 
 #### Option 2: Local Installation (Recommended for Development)
 
 ```bash
 # Clone the repository
-git clone https://gitea.example.com/jochemvangrondelle/bank-importer-th.git
-cd bank-importer-th
+git clone https://gitea.example.com/jochemvangrondelle/bank-importer.git
+cd bank-importer
 
 # Install dependencies
 uv sync
@@ -127,13 +127,13 @@ cp config-example.toml config.toml
 
 ```bash
 # Pull stable release from Harbor registry (recommended for production)
-docker pull reg.jochempiya.org/jochem/bank-importer-th:stable
+docker pull reg.jochempiya.org/jochem/bank-importer:stable
 
 # Or pull latest beta for testing
-docker pull reg.jochempiya.org/jochem/bank-importer-th:latest
+docker pull reg.jochempiya.org/jochem/bank-importer:latest
 
 # Run the container with help
-docker run --rm reg.jochempiya.org/jochem/bank-importer-th:stable --help
+docker run --rm reg.jochempiya.org/jochem/bank-importer:stable --help
 
 # Run with actual commands (mount your data directories)
 docker run --rm \
@@ -141,8 +141,8 @@ docker run --rm \
   -v $(pwd)/data/out:/app/data/out \
   -v $(pwd)/logs:/app/logs \
   -v $(pwd)/config.toml:/app/config.toml:ro \
-  reg.jochempiya.org/jochem/bank-importer-th:stable \
-  bank-importer-th import-files data/in/
+  reg.jochempiya.org/jochem/bank-importer:stable \
+  bank-importer import-files data/in/
 ```
 
 ##### Using Docker Compose (Recommended)
@@ -152,9 +152,9 @@ docker run --rm \
 docker-compose run --rm bank-importer --help
 
 # Run actual commands
-docker-compose run --rm bank-importer bank-importer-th import-files data/in/
-docker-compose run --rm bank-importer bank-importer-th export --target csv
-docker-compose run --rm bank-importer bank-importer-th status
+docker-compose run --rm bank-importer bank-importer import-files data/in/
+docker-compose run --rm bank-importer bank-importer export --target csv
+docker-compose run --rm bank-importer bank-importer status
 
 # Build locally when needed
 docker-compose build
@@ -209,9 +209,9 @@ The container includes a smart entrypoint that handles various command patterns:
 ```bash
 # These all work the same way:
 docker run --rm <image> --help
-docker run --rm <image> bank-importer-th --help
+docker run --rm <image> bank-importer --help
 docker run --rm <image> import-files data/in/
-docker run --rm <image> bank-importer-th import-files data/in/
+docker run --rm <image> bank-importer import-files data/in/
 ```
 
 ##### Docker Image Optimization
@@ -238,23 +238,23 @@ The Docker image is optimized for production use:
 
 ```bash
 # Using uv run (traditional way)
-uv run python -m bank_importer_th import-files data/in/
-uv run python -m bank_importer_th export-multi
-uv run python -m bank_importer_th status
+uv run python -m bank_importer import-files data/in/
+uv run python -m bank_importer export-multi
+uv run python -m bank_importer status
 
 # Using direct script (new way)
-bank-importer-th import-files data/in/
-bank-importer-th export-multi
-bank-importer-th status
+bank-importer import-files data/in/
+bank-importer export-multi
+bank-importer status
 ```
 
 #### Docker Usage
 
 ```bash
 # Using docker run
-docker run --rm -v $(pwd)/data:/app/data -v $(pwd)/config.toml:/app/config.toml bank-importer-th import-files data/in/
-docker run --rm -v $(pwd)/data:/app/data -v $(pwd)/config.toml:/app/config.toml bank-importer-th export-multi
-docker run --rm -v $(pwd)/data:/app/data -v $(pwd)/config.toml:/app/config.toml bank-importer-th status
+docker run --rm -v $(pwd)/data:/app/data -v $(pwd)/config.toml:/app/config.toml bank-importer import-files data/in/
+docker run --rm -v $(pwd)/data:/app/data -v $(pwd)/config.toml:/app/config.toml bank-importer export-multi
+docker run --rm -v $(pwd)/data:/app/data -v $(pwd)/config.toml:/app/config.toml bank-importer status
 
 # Using docker-compose (recommended)
 docker-compose run --rm bank-importer import-files data/in/
@@ -296,21 +296,21 @@ docker-compose run --rm bank-importer status
 
 ```bash
 # Build the image
-docker build -t bank-importer-th .
+docker build -t bank-importer .
 
 # Run with volume mounts
 docker run --rm \
   -v $(pwd)/data/in:/app/data/in:ro \
   -v $(pwd)/data/out:/app/data/out \
   -v $(pwd)/config.toml:/app/config.toml:ro \
-  bank-importer-th import-files data/in/
+  bank-importer import-files data/in/
 
 # Export transactions
 docker run --rm \
   -v $(pwd)/data/in:/app/data/in:ro \
   -v $(pwd)/data/out:/app/data/out \
   -v $(pwd)/config.toml:/app/config.toml:ro \
-  bank-importer-th export-multi
+  bank-importer export-multi
 ```
 
 #### Docker Volume Structure
@@ -381,8 +381,8 @@ country_code   = "TH"
 ## Project Structure
 
 ```
-bank-importer-th/
-├── src/bank_importer_th/
+bank-importer/
+├── src/bank_importer/
 │   ├── banks/           # Bank-specific parsers
 │   ├── targets/         # Export format handlers
 │   ├── translation_terms/ # Thai financial terms
@@ -407,9 +407,9 @@ After installation, you can run the application directly:
 
 ```bash
 # Direct script execution
-bank-importer-th --help
-bank-importer-th import-files data/in/
-bank-importer-th export-multi
+bank-importer --help
+bank-importer import-files data/in/
+bank-importer export-multi
 ```
 
 ### Module Entry Point
@@ -418,8 +418,8 @@ Traditional Python module execution:
 
 ```bash
 # Module execution
-uv run python -m bank_importer_th --help
-uv run python -m bank_importer_th import-files data/in/
+uv run python -m bank_importer --help
+uv run python -m bank_importer import-files data/in/
 ```
 
 ### Docker Entry Point
@@ -428,7 +428,7 @@ Containerized execution:
 
 ```bash
 # Docker execution
-docker run --rm bank-importer-th --help
+docker run --rm bank-importer --help
 docker-compose run --rm bank-importer import-files data/in/
 ```
 
@@ -498,14 +498,14 @@ Contributions are welcome! The project is designed for extensibility:
 
 ### Adding New Banks
 
-1. Create a new parser in `src/bank_importer_th/banks/`
+1. Create a new parser in `src/bank_importer/banks/`
 2. Implement the `Parser` interface
 3. Add configuration examples
 4. Update documentation
 
 ### Adding New Export Formats
 
-1. Create a new target in `src/bank_importer_th/targets/`
+1. Create a new target in `src/bank_importer/targets/`
 2. Implement the `Target` interface
 3. Add configuration options
 4. Update documentation
@@ -588,18 +588,18 @@ For Gitea-specific setup instructions, see [Gitea Setup Guide](docs/GITEA_SETUP.
 
 ```bash
 # Build development image
-docker build -t bank-importer-th:dev .
+docker build -t bank-importer:dev .
 
 # Run with development volumes
 docker run --rm -it \
   -v $(pwd)/src:/app/src \
   -v $(pwd)/data:/app/data \
   -v $(pwd)/config.toml:/app/config.toml \
-  bank-importer-th:dev bash
+  bank-importer:dev bash
 
 # Test Docker build
-docker build -t bank-importer-th:test .
-docker run --rm bank-importer-th:test --help
+docker build -t bank-importer:test .
+docker run --rm bank-importer:test --help
 ```
 
 ### Publishing to Docker Hub
@@ -608,12 +608,12 @@ To publish the Docker image to Docker Hub:
 
 ```bash
 # Build with proper tags
-docker build -t yourusername/bank-importer-th:latest .
-docker build -t yourusername/bank-importer-th:v0.0.1 .
+docker build -t yourusername/bank-importer:latest .
+docker build -t yourusername/bank-importer:v0.0.1 .
 
 # Push to Docker Hub
-docker push yourusername/bank-importer-th:latest
-docker push yourusername/bank-importer-th:v0.0.1
+docker push yourusername/bank-importer:latest
+docker push yourusername/bank-importer:v0.0.1
 ```
 
 ### Docker Best Practices
@@ -666,7 +666,7 @@ The project uses `bump2version` for automated version management and releases.
 
 ```bash
 # Show current version
-bank-importer-th version
+bank-importer version
 
 # Show version via Makefile
 make version
@@ -716,7 +716,7 @@ make release
 ### 📋 **Version Files**
 
 - **`pyproject.toml`**: Package version for distribution (single source of truth)
-- **`src/bank_importer_th/__init__.py`**: Python package version
+- **`src/bank_importer/__init__.py`**: Python package version
 - **`.bumpversion.cfg`**: Configuration for automated version bumping
 
 ## Recent Enhancements
@@ -730,9 +730,9 @@ make release
 
 ### 📦 **Script Entry Points**
 
-- **Direct script execution**: `bank-importer-th` command after installation
-- **Module execution**: Traditional `uv run python -m bank_importer_th`
-- **Docker execution**: Containerized `docker run bank-importer-th`
+- **Direct script execution**: `bank-importer` command after installation
+- **Module execution**: Traditional `uv run python -m bank_importer`
+- **Docker execution**: Containerized `docker run bank-importer`
 
 ### 📊 **Enhanced Documentation**
 

@@ -34,8 +34,8 @@ def _get_local_timezone() -> str:
     try:
         local_tz = datetime.datetime.now(datetime.UTC).astimezone().tzinfo
         # Try to get timezone name
-        if hasattr(local_tz, "zone"):
-            tz_name = local_tz.zone  # type: ignore[attr-defined]
+        if local_tz is not None and hasattr(local_tz, "zone"):
+            tz_name = getattr(local_tz, "zone", None)
             if tz_name:
                 return str(tz_name)
         return "Asia/Bangkok"

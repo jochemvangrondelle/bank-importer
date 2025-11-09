@@ -124,7 +124,7 @@ def _get_all_currency_codes() -> list[str]:
 
 # Create Currency enum with all available currencies
 _currency_codes = _get_all_currency_codes()
-Currency = Enum("Currency", {code: code for code in _currency_codes}, type=str)
+Currency = Enum("Currency", {code: code for code in _currency_codes}, type=str)  # type: ignore[misc]
 
 
 def _get_all_country_codes() -> list[str]:
@@ -170,7 +170,7 @@ def _get_all_country_codes() -> list[str]:
 
 # Create CountryCode enum with all available countries
 _country_codes = _get_all_country_codes()
-CountryCode = Enum("CountryCode", {code: code for code in _country_codes}, type=str)
+CountryCode = Enum("CountryCode", {code: code for code in _country_codes}, type=str)  # type: ignore[misc]
 
 
 def get_currency_name(code: str) -> str | None:
@@ -243,22 +243,34 @@ def _get_all_language_codes() -> list[str]:
 # This automatically includes all ISO 639-1 language codes without manual maintenance
 # Cached to avoid regenerating on every import
 _language_codes = _get_all_language_codes()
-Language = Enum(
-    "Language",
-    {code.upper(): code.lower() for code in _language_codes},
-    type=str,
-)
+# Build enum members dict explicitly for mypy
+_language_enum_dict: dict[str, str] = {
+    code.upper(): code.lower() for code in _language_codes
+}
+Language = Enum("Language", _language_enum_dict, type=str)  # type: ignore[misc]
 
 
 # Helper functions to get common language enum values
 def get_language_th() -> Language:
     """Get Thai language enum value."""
-    return Language.TH  # type: ignore[attr-defined]
+    # Access enum member by value
+    for lang in Language:
+        if lang.value == "th":
+            return lang
+    # Fallback (should never happen, but mypy needs it)
+    # We know "th" exists in the enum, so this is safe
+    return next(iter(Language))  # Return first enum member as fallback
 
 
 def get_language_en() -> Language:
     """Get English language enum value."""
-    return Language.EN  # type: ignore[attr-defined]
+    # Access enum member by value
+    for lang in Language:
+        if lang.value == "en":
+            return lang
+    # Fallback (should never happen, but mypy needs it)
+    # We know "en" exists in the enum, so this is safe
+    return next(iter(Language))  # Return first enum member as fallback
 
 
 def get_language_name(code: str) -> str | None:

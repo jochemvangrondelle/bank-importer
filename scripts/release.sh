@@ -36,7 +36,7 @@ if [ ! -f "pyproject.toml" ]; then
 fi
 
 # Get current version
-CURRENT_VERSION=$(uv run --python 3.11 python -c "from src.bank_importer_th import __version__; print(__version__)")
+CURRENT_VERSION=$(uv run --python 3.11 python -c "from src.bank_importer import __version__; print(__version__)")
 print_status "Current version: $CURRENT_VERSION"
 
 # Determine version bump type
@@ -59,7 +59,7 @@ fi
 uv run --python 3.11 bump2version --allow-dirty $BUMP_TYPE
 
 # Get new version
-NEW_VERSION=$(uv run --python 3.11 python -c "from src.bank_importer_th import __version__; print(__version__)")
+NEW_VERSION=$(uv run --python 3.11 python -c "from src.bank_importer import __version__; print(__version__)")
 print_success "Version bumped to: $NEW_VERSION"
 
 # Run tests
@@ -77,8 +77,8 @@ uv run --python 3.11 python -m build
 
 # Build Docker image
 print_status "Building Docker image..."
-docker build -t bank-importer-th:$NEW_VERSION .
-docker tag bank-importer-th:$NEW_VERSION bank-importer-th:latest
+docker build -t bank-importer:$NEW_VERSION .
+docker tag bank-importer:$NEW_VERSION bank-importer:latest
 
 print_success "Release preparation complete!"
 print_status "Next steps:"
@@ -86,4 +86,4 @@ echo "  1. Review changes: git log --oneline -5"
 echo "  2. Push changes: git push origin main"
 echo "  3. Push tag: git push origin v$NEW_VERSION"
 echo "  4. Create GitHub release for v$NEW_VERSION"
-echo "  5. Push Docker image: docker push bank-importer-th:$NEW_VERSION"
+echo "  5. Push Docker image: docker push bank-importer:$NEW_VERSION"

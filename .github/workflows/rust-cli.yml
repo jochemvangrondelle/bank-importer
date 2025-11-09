@@ -1,0 +1,89 @@
+name: Rust CLI CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "rust-cli/**"
+      - ".github/workflows/rust-cli.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "rust-cli/**"
+      - ".github/workflows/rust-cli.yml"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust-cli/target/
+          key: ${{ runner.os }}-rust-cli-cargo-${{ hashFiles('rust-cli/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-rust-cli-cargo-
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check formatting
+        working-directory: rust-cli
+        run: cargo fmt --check
+
+      - name: Run clippy
+        working-directory: rust-cli
+        run: cargo clippy --all-features -- -D warnings
+
+      - name: Run tests
+        working-directory: rust-cli
+        run: cargo test --all-features
+
+      - name: Build release
+        working-directory: rust-cli
+        run: cargo build --release
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run clippy
+        working-directory: rust-cli
+        run: |
+          cargo clippy --all-features -- -D warnings
+          cargo clippy --all-features -- -W clippy::pedantic
+          cargo clippy --all-features -- -W clippy::nursery
+
+      - name: Check formatting
+        working-directory: rust-cli
+        run: cargo fmt --check
+
+      - name: Check documentation
+        working-directory: rust-cli
+        run: cargo doc --no-deps --all-features

@@ -22,7 +22,7 @@ from bank_importer.parser_detector import ParserDetector
 
 @cli_error_handler
 def list_parsers(
-    config_file: str = CONFIG_FILE_PARAM,
+    _config_file: str = CONFIG_FILE_PARAM,
 ) -> None:
     """**List** all available parsers with their capabilities."""
     console = get_console()

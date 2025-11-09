@@ -31,14 +31,16 @@ from bank_importer.logging_config import (
     setup_logging,
 )
 from bank_importer.parser_detector import ParserDetector
+from bank_importer.telemetry import trace_function
 
 
+@trace_function(attributes={"operation": "cli_import"})  # type: ignore[misc]
 def import_files(
     paths: list[Path] = typer.Argument(
         None,
         help="Paths to files or directories to import (default: data/)",
     ),
-    config_file: str = CONFIG_FILE_PARAM,
+    _config_file: str = CONFIG_FILE_PARAM,
     account: str = ACCOUNT_PARAM,
     *,
     verbose: bool = VERBOSE_PARAM,

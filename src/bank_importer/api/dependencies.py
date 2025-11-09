@@ -49,7 +49,7 @@ def get_db_manager(
 
 def get_processor(
     config: ConfigManager = Depends(get_config_manager),
-    db: DatabaseManager = Depends(get_db_manager),
+    _db: DatabaseManager = Depends(get_db_manager),
 ) -> Processor:
     """Get Processor instance."""
     # Processor takes config_path, but we can create it with the config path

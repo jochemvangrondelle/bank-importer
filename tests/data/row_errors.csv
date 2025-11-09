@@ -1,0 +1,4 @@
+date,description,amount
+2024-01-01,Valid Transaction,-1000.00
+invalid_row_data
+2024-01-02,Another Valid Transaction,2000.00

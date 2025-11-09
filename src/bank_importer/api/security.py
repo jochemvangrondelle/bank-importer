@@ -31,8 +31,10 @@ try:
     import bcrypt
 
     if not hasattr(bcrypt, "__about__"):
-        bcrypt.__about__ = types.ModuleType("__about__")
-        bcrypt.__about__.__version__ = getattr(bcrypt, "__version__", "5.0.0")
+        about_module = types.ModuleType("__about__")
+        bcrypt_version = getattr(bcrypt, "__version__", "5.0.0")
+        about_module.__version__ = bcrypt_version  # type: ignore[attr-defined]
+        bcrypt.__about__ = about_module  # type: ignore[attr-defined]
 
     # Patch bcrypt.hashpw to truncate passwords longer than 72 bytes
     # This prevents errors during wrap bug detection
@@ -49,7 +51,7 @@ try:
     # Patch passlib's wrap bug detection to avoid issues with long test passwords
     import passlib.handlers.bcrypt as bcrypt_handler
 
-    def patched_detect_wrap_bug(ident: bytes) -> bool:
+    def patched_detect_wrap_bug(_ident: bytes) -> bool:
         """Patched version that skips wrap bug detection to avoid bcrypt 72-byte limit issues."""
         # Skip detection - assume no wrap bug (bcrypt 2b doesn't have this issue)
         # This prevents passlib from trying to hash long passwords during detection
@@ -62,7 +64,7 @@ try:
     if hasattr(bcrypt_handler, "_BcryptBackend"):
         backend_class = bcrypt_handler._BcryptBackend
         if hasattr(backend_class, "detect_wrap_bug"):
-            backend_class.detect_wrap_bug = lambda self, ident: False
+            backend_class.detect_wrap_bug = lambda _self, _ident: False
 except (ImportError, AttributeError):
     pass
 
@@ -106,7 +108,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     if len(password_bytes) > 72:
         # Truncate to 72 bytes, then decode back to string
         plain_password = password_bytes[:72].decode("utf-8", errors="ignore")
-    return _get_pwd_context().verify(plain_password, hashed_password)
+    result = _get_pwd_context().verify(plain_password, hashed_password)
+    return bool(result)
 
 
 def get_password_hash(password: str) -> str:
@@ -120,7 +123,8 @@ def get_password_hash(password: str) -> str:
     if len(password_bytes) > 72:
         # Truncate to 72 bytes, then decode back to string
         password = password_bytes[:72].decode("utf-8", errors="ignore")
-    return _get_pwd_context().hash(password)
+    result = _get_pwd_context().hash(password)
+    return str(result)
 
 
 def create_access_token(
@@ -138,7 +142,8 @@ def create_access_token(
         )
     to_encode.update({"exp": expire})
     key = secret_key or settings.get_jwt_secret_key()
-    return jwt.encode(to_encode, key, algorithm=settings.JWT_ALGORITHM)
+    result = jwt.encode(to_encode, key, algorithm=settings.JWT_ALGORITHM)
+    return str(result)
 
 
 def verify_token(token: str, secret_key: str | None = None) -> dict[str, Any]:
@@ -146,6 +151,7 @@ def verify_token(token: str, secret_key: str | None = None) -> dict[str, Any]:
     try:
         key = secret_key or settings.get_jwt_secret_key()
         return jwt.decode(token, key, algorithms=[settings.JWT_ALGORITHM])
+        # jwt.decode always returns dict[str, Any] at runtime
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

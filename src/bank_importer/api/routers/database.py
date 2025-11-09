@@ -29,8 +29,8 @@ router = APIRouter()
 async def init_database(
     *,
     reset: bool = False,
-    config: ConfigManager = Depends(get_config_manager),
-    _: dict = Depends(require_auth),
+    config: Annotated[ConfigManager, Depends(get_config_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, str]:
     """Initialize database."""
     db_url = config.get_database_url()
@@ -61,20 +61,23 @@ async def init_database(
 async def get_database_stats(
     db: Annotated[DatabaseManager, Depends(get_db_manager)],
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, Any]:
     """Get database statistics."""
     # Count transactions
     result = db.conn.execute("SELECT COUNT(*) FROM transactions")
-    total_transactions = result.fetchone()[0] if result else 0
+    row = result.fetchone()
+    total_transactions = row[0] if row else 0
 
     # Count import sessions
     result = db.conn.execute("SELECT COUNT(*) FROM import_sessions")
-    total_import_sessions = result.fetchone()[0] if result else 0
+    row = result.fetchone()
+    total_import_sessions = row[0] if row else 0
 
     # Count export sessions
     result = db.conn.execute("SELECT COUNT(*) FROM export_sessions")
-    total_export_sessions = result.fetchone()[0] if result else 0
+    row = result.fetchone()
+    total_export_sessions = row[0] if row else 0
 
     # Get database size
     db_url = config.get_database_url()

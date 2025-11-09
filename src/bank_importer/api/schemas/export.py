@@ -75,23 +75,22 @@ class ExportSessionResponse(BaseModel):
     @classmethod
     def from_export_session(cls, session: ExportSession) -> "ExportSessionResponse":
         """Create from ExportSession model."""
-        data = {
-            "id": session.id,
-            "session_name": session.session_name,
-            "target_name": session.target_name,
-            "account_reference": session.account_reference,
-            "status": session.status,
-            "total_transactions": session.total_transactions,
-            "exported_transactions": session.exported_transactions,
-            "skipped_transactions": session.skipped_transactions,
-            "error_transactions": session.error_transactions,
-            "output_file": session.output_file,
-            "session_metadata": session.session_metadata,
-            "error_message": session.error_message,
-            "started_at": session.started_at,
-            "completed_at": session.completed_at,
-        }
-        return cls(**data)
+        return cls(
+            id=session.id,
+            session_name=session.session_name,
+            target_name=session.target_name,
+            account_reference=session.account_reference,
+            status=session.status,
+            total_transactions=session.total_transactions,
+            exported_transactions=session.exported_transactions,
+            skipped_transactions=session.skipped_transactions,
+            error_transactions=session.error_transactions,
+            output_file=session.output_file,
+            session_metadata=session.session_metadata,
+            error_message=session.error_message,
+            started_at=session.started_at,
+            completed_at=session.completed_at,
+        )
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ExportSessionResponse":

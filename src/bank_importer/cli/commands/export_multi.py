@@ -29,10 +29,12 @@ from bank_importer.logging_config import (
     log_success,
     setup_logging,
 )
+from bank_importer.telemetry import trace_function
 
 
+@trace_function(attributes={"operation": "cli_export"})  # type: ignore[misc]
 def export_multi(
-    config_file: str = CONFIG_FILE_PARAM,
+    _config_file: str = CONFIG_FILE_PARAM,
     target: str = TARGET_PARAM,
     *,
     verbose: bool = VERBOSE_PARAM,

@@ -30,6 +30,7 @@ from bank_importer.models.import_session import ImportSession
 from bank_importer.models.transaction import Transaction
 from bank_importer.parser_detector import ParserDetector
 from bank_importer.target_manager import TargetManager
+from bank_importer.telemetry import trace_function, trace_span
 from bank_importer.translation_service import get_translation_service
 
 # Constants for filename parsing
@@ -74,6 +75,136 @@ class Processor:
         for account_config in self.config_manager.get_all_accounts():
             yield from self.process_account(account_config["name"])
 
+    def _validate_account_and_parser(
+        self,
+        account_name: str,
+        parser_name: str | None,
+    ) -> dict[str, Any] | None:
+        """Validate account config and parser, return error dict if failed."""
+        account_config = self.config_manager.get_account_config(account_name)
+        if not account_config:
+            msg = "Account not found"
+            raise ValueError(msg)
+
+        if parser_name:
+            try:
+                self._get_parser(parser_name)
+            except ValueError as e:
+                self.logger.exception("Parser error for account '%s'", account_name)
+                return {
+                    "account_name": account_name,
+                    "error_count": 1,
+                    "error_message": str(e),
+                }
+
+        return None
+
+    def _detect_parser_for_file(
+        self,
+        file_path: Path,
+        parser_name: str | None,
+    ) -> str | None:
+        """Detect parser for a file if not already specified."""
+        if parser_name:
+            return parser_name
+
+        parent_folder = file_path.parent.name
+        detected_parser_name = self.parser_detector.detect_parser(
+            file_path,
+            parent_folder,
+        )
+
+        if detected_parser_name:
+            self.logger.info(
+                "Detected parser '%s' for file: %s",
+                detected_parser_name,
+                file_path,
+            )
+
+        return detected_parser_name
+
+    def _should_skip_file(
+        self,
+        file_path: Path,
+        *,
+        reprocess_existing: bool,
+    ) -> bool:
+        """Check if file should be skipped (already imported/exported)."""
+        if reprocess_existing:
+            return False
+
+        if self.db_manager.has_source_file_been_imported(str(file_path)):
+            self.logger.info(
+                "Skipping %s - already imported (use --reprocess-existing to override)",
+                file_path,
+            )
+            return True
+
+        if self.db_manager.has_source_file_been_exported(str(file_path)):
+            self.logger.info(
+                "Skipping %s - already exported (use --reprocess-existing to override)",
+                file_path,
+            )
+            return True
+
+        return False
+
+    def _process_single_file(
+        self,
+        file_path: Path,
+        account_config: dict[str, Any],
+        parser_name: str | None,
+        account_name: str,
+        *,
+        reprocess_existing: bool,
+    ) -> tuple[int, int]:
+        """Process a single file and return (processed_count, error_count)."""
+        detected_parser_name = self._detect_parser_for_file(file_path, parser_name)
+        if not detected_parser_name:
+            self.logger.error("Could not detect parser for file: %s", file_path)
+            return (0, 1)
+
+        try:
+            file_parser = self._get_parser(detected_parser_name)
+        except ValueError as e:
+            self.logger.exception(
+                "Parser '%s' not found: %s",
+                detected_parser_name,
+                e,
+            )
+            return (0, 1)
+
+        if not file_parser.can_parse(file_path):
+            self.logger.warning(
+                "Parser '%s' cannot parse file: %s",
+                detected_parser_name,
+                file_path,
+            )
+            return (0, 1)
+
+        if self._should_skip_file(file_path, reprocess_existing=reprocess_existing):
+            return (0, 0)  # Skipped, not an error
+
+        self.logger.info(
+            "Processing %s for account '%s' with parser '%s'",
+            file_path,
+            account_name,
+            detected_parser_name,
+        )
+
+        try:
+            transactions = self._process_file(
+                file_path,
+                account_config,
+                detected_parser_name or "",  # Convert None to empty string
+                reprocess_existing=reprocess_existing,
+            )
+            return (len(transactions), 0)
+        except Exception:
+            self.logger.exception("Error processing file %s", file_path)
+            return (0, 1)
+
+    @trace_function(attributes={"operation": "process_account"})  # type: ignore[misc]
     def process_account(
         self,
         account_name: str,
@@ -93,24 +224,15 @@ class Processor:
         file_path = Path(account_config.get("file_path", "data/in"))
         file_pattern = account_config.get("file_pattern", "*")
 
-        # Get parser - use parser detection if no parser specified
         if not parser_name:
             self.logger.warning(
                 "No parser specified for account '%s', will use auto-detection",
                 account_name,
             )
 
-        try:
-            if parser_name:
-                self._get_parser(parser_name)
-            # else: Will be detected per file
-        except ValueError as e:
-            self.logger.exception("Parser error for account '%s'", account_name)
-            yield {
-                "account_name": account_name,
-                "error_count": 1,
-                "error_message": str(e),
-            }
+        error_result = self._validate_account_and_parser(account_name, parser_name)
+        if error_result:
+            yield error_result
             return
 
         # Find files to process
@@ -133,84 +255,18 @@ class Processor:
         total_errors = 0
         total_skipped = 0
 
-        for file_path in files:
-            # Detect parser for this file if not specified
-            detected_parser_name = parser_name
-            if not parser_name:
-                # Get parent folder hint for better detection
-                parent_folder = file_path.parent.name
-                detected_parser_name = self.parser_detector.detect_parser(
-                    file_path,
-                    parent_folder,
-                )
-
-                if not detected_parser_name:
-                    self.logger.error("Could not detect parser for file: %s", file_path)
-                    total_errors += 1
-                    continue
-
-                self.logger.info(
-                    "Detected parser '%s' for file: %s",
-                    detected_parser_name,
-                    file_path,
-                )
-
-            # Get the parser instance
-            try:
-                file_parser = self._get_parser(detected_parser_name)
-            except ValueError as e:
-                self.logger.exception(
-                    "Parser '%s' not found: %s",
-                    detected_parser_name,
-                    e,
-                )
-                total_errors += 1
-                continue
-
-            # Validate parser can handle this file
-            if not file_parser.can_parse(file_path):
-                self.logger.warning(
-                    "Parser '%s' cannot parse file: %s",
-                    detected_parser_name,
-                    file_path,
-                )
-                total_errors += 1
-                continue
-
-            # Check if file has been imported or exported (unless reprocessing is requested)
-            if not reprocess_existing:
-                if self.db_manager.has_source_file_been_imported(str(file_path)):
-                    self.logger.info(
-                        "Skipping %s - already imported (use --reprocess-existing to override)",
-                        file_path,
-                    )
-                    total_skipped += 1
-                    continue
-                elif self.db_manager.has_source_file_been_exported(str(file_path)):
-                    self.logger.info(
-                        "Skipping %s - already exported (use --reprocess-existing to override)",
-                        file_path,
-                    )
-                    total_skipped += 1
-                    continue
-
-            self.logger.info(
-                "Processing %s for account '%s' with parser '%s'",
-                file_path,
+        for file_path_item in files:
+            processed, errors = self._process_single_file(
+                file_path_item,
+                account_config,
+                parser_name,
                 account_name,
-                detected_parser_name,
+                reprocess_existing=reprocess_existing,
             )
-            try:
-                transactions = self._process_file(
-                    file_path,
-                    account_config,
-                    detected_parser_name,  # type: ignore[arg-type]
-                    reprocess_existing=reprocess_existing,
-                )
-                total_processed += len(transactions)
-            except Exception:
-                self.logger.exception("Error processing file %s", file_path)
-                total_errors += 1
+            total_processed += processed
+            total_errors += errors
+            if processed == 0 and errors == 0:
+                total_skipped += 1
 
         yield {
             "account_name": account_name,

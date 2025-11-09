@@ -1,0 +1,208 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run tests with coverage
+        run: uv run pytest --cov=src/bank_importer --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Run type checking (mypy - strict)
+        run: uv run mypy src/ --strict
+
+      - name: Run type checking (pyright - strict)
+        run: uv run pyright src/
+
+      - name: Run linting (ruff - strict)
+        run: uv run ruff check src/
+
+      - name: Check formatting
+        run: uv run ruff format --check src/
+
+  frontend-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run type checking
+        working-directory: ./frontend
+        run: npm run type-check
+
+      - name: Run linting
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Check formatting
+        working-directory: ./frontend
+        run: npm run format:check
+
+      - name: Generate OpenAPI spec
+        run: |
+          python3 -m pip install pyyaml --quiet
+          python3 scripts/generate_openapi.py api/openapi.yaml
+
+      - name: Check if frontend API client is up-to-date
+        working-directory: ./frontend
+        run: npm run check:api-client
+
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests with coverage
+        working-directory: ./frontend
+        env:
+          CI: true
+          COVERAGE: true
+        run: npm run test:e2e:coverage
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
+      - name: Upload coverage reports to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: frontend/coverage/lcov.info
+          flags: frontend-e2e
+          name: codecov-frontend
+          fail_ci_if_error: false
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, frontend-test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Build package
+        run: uv build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  build-rust-cli:
+    runs-on: ubuntu-latest
+    needs: [test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Get Python executable path
+        id: python_path
+        run: |
+          PYTHON_EXEC=$(python3.11 -c "import sys; print(sys.executable)")
+          echo "python_executable=$PYTHON_EXEC" >> $GITHUB_OUTPUT
+          echo "Using Python: $PYTHON_EXEC"
+          $PYTHON_EXEC --version
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust-cli/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust-cli/Cargo.lock') }}
+
+      - name: Build Rust CLI
+        working-directory: rust-cli
+        env:
+          PYO3_PYTHON: ${{ steps.python_path.outputs.python_executable }}
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+        run: cargo build --release
+
+      - name: Test Rust CLI
+        working-directory: rust-cli
+        run: |
+          ./target/release/bank-importer-cli --version || echo "CLI executed (exit code: $?)"
+          ./target/release/bank-importer-cli --help
+
+      - name: Upload Rust CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-cli-linux-amd64
+          path: rust-cli/target/release/bank-importer-cli

@@ -1,0 +1,73 @@
+[importlinter]
+root_package = bank_importer
+
+[importlinter:contract:core-independence]
+name = Core package must not import from CLI or API
+type = forbidden
+source_modules =
+    bank_importer
+    bank_importer.banks
+    bank_importer.targets
+    bank_importer.models
+    bank_importer.interfaces
+    bank_importer.translation_terms
+    bank_importer.config
+    bank_importer.config_resolver
+    bank_importer.processor
+    bank_importer.parser_detector
+    bank_importer.target_manager
+    bank_importer.translation_service
+    bank_importer.library
+    bank_importer.logging_config
+    bank_importer.version
+forbidden_modules =
+    bank_importer.cli
+    bank_importer.api
+
+[importlinter:contract:cli-uses-core]
+name = CLI must only import from core, not API
+type = layers
+layers =
+    bank_importer
+    bank_importer.cli
+
+[importlinter:contract:api-uses-core]
+name = API must only import from core, not CLI
+type = layers
+layers =
+    bank_importer
+    bank_importer.api
+
+[importlinter:contract:cli-no-translate-firefly]
+name = CLI must not import translation_service or firefly_target directly
+type = forbidden
+source_modules =
+    bank_importer.cli
+forbidden_modules =
+    bank_importer.translation_service
+    bank_importer.targets.firefly_target
+
+[importlinter:contract:api-no-translate-firefly]
+name = API must not import translation_service or firefly_target directly
+type = forbidden
+source_modules =
+    bank_importer.api
+forbidden_modules =
+    bank_importer.translation_service
+    bank_importer.targets.firefly_target
+
+[importlinter:contract:no-cli-api-cross]
+name = CLI and API must not import from each other
+type = forbidden
+source_modules =
+    bank_importer.cli
+forbidden_modules =
+    bank_importer.api
+
+[importlinter:contract:no-api-cli-cross]
+name = API and CLI must not import from each other
+type = forbidden
+source_modules =
+    bank_importer.api
+forbidden_modules =
+    bank_importer.cli

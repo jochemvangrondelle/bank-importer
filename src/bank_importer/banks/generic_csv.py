@@ -358,6 +358,11 @@ class GenericCsvParser(Parser):
         # Parse amounts
         amount = self._parse_amount(amount_str) if amount_str else Decimal(0)
         balance = self._parse_amount(balance_str) if balance_str else Decimal(0)
+        # Ensure amount and balance are not None (required fields)
+        if amount is None:
+            amount = Decimal(0)
+        if balance is None:
+            balance = Decimal(0)
         old_balance = self._parse_amount(old_balance_str) if old_balance_str else None
         new_balance = self._parse_amount(new_balance_str) if new_balance_str else None
         exchange_rate = (
@@ -385,7 +390,8 @@ class GenericCsvParser(Parser):
             transaction_type = transaction_type.lower()
 
         # Use new_balance if available, otherwise use balance
-        final_balance = new_balance if new_balance is not None else balance
+        # balance is guaranteed to be Decimal at this point
+        final_balance: Decimal = new_balance if new_balance is not None else balance
 
         # Skip transactions with missing required fields
         if not date or not description or amount == 0:

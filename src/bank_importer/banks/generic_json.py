@@ -226,7 +226,7 @@ class GenericJsonParser(Parser):
                 or account_config.get("country_code", "TH"),
                 channel=extracted_data.get("channel"),
                 reference=extracted_data.get("reference"),
-                file_path=str(file_path),
+                source_file=str(file_path),
                 raw_text=str(data),
                 raw_json=json.dumps(data),
                 parser_name="generic_json",

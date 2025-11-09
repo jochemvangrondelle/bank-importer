@@ -39,12 +39,12 @@ def _ensure_rich_available() -> None:
         return
 
     try:
-        from rich.console import Console as _ConsoleType  # type: ignore[import-untyped]
+        from rich.console import Console as _ConsoleType
         from rich.logging import (
-            RichHandler as _RichHandlerType,  # type: ignore[import-untyped]
+            RichHandler as _RichHandlerType,
         )
-        from rich.theme import Theme as _ThemeType  # type: ignore[import-untyped]
-        from rich.traceback import (  # type: ignore[import-untyped]
+        from rich.theme import Theme as _ThemeType
+        from rich.traceback import (
             Traceback as _TracebackType,
         )
         from rich.traceback import install as _install_func
@@ -95,7 +95,10 @@ def get_console() -> "Console":
             },
         )
         _console = _Console(theme=CUSTOM_THEME)
-    return _console
+    # Type checker knows _console is Console at this point
+    from typing import cast
+
+    return cast("Console", _console)
 
 
 class SecretMaskingFormatter(logging.Formatter):
@@ -403,8 +406,11 @@ def _setup_logging_impl(config: LoggingConfig) -> logging.Logger:
     logger = logging.getLogger("bank_importer")
     logger.setLevel(getattr(logging, str(log_level).upper()))
 
-    # Clear existing handlers
-    logger.handlers.clear()
+    # Clear existing handlers - close file handlers first to avoid ResourceWarnings
+    for handler in logger.handlers[:]:
+        if isinstance(handler, logging.FileHandler):
+            handler.close()
+        logger.removeHandler(handler)
 
     # Convert console_level and file_level to strings if they are enums
     console_level_str = (

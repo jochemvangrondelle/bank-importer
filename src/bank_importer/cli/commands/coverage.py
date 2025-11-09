@@ -13,7 +13,7 @@
 """Coverage command for the bank importer CLI."""
 
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import typer
@@ -36,6 +36,128 @@ from bank_importer.models.database import DatabaseManager
 # Constants for coverage reporting
 MAX_MISSING_DATES_DISPLAY = 10
 MAX_QUIETEST_DAYS_DISPLAY = 10
+
+
+def _group_transactions_by_date(
+    transactions: list[dict[str, str]],
+) -> tuple[dict[str, int], list[date]]:
+    """Group transactions by date and return date counts and list of dates."""
+    date_counts: dict[str, int] = defaultdict(int)
+    dates = []
+
+    for tx in transactions:
+        try:
+            tx_date = datetime.fromisoformat(tx["date"]).date()
+            date_counts[str(tx_date)] += 1
+            dates.append(tx_date)
+        except Exception as e:
+            log_info(
+                f"DEBUG: Error parsing date for transaction: {tx.get('date')} - {e}",
+            )
+            continue
+
+    return date_counts, dates
+
+
+def _find_missing_dates(
+    min_date: date,
+    max_date: date,
+    date_counts: dict[str, int],
+) -> list[date]:
+    """Find missing dates in the range."""
+    missing_dates = []
+    current_date = min_date
+    while current_date <= max_date:
+        if current_date not in date_counts:
+            missing_dates.append(current_date)
+        current_date += timedelta(days=1)
+    return missing_dates
+
+
+def _display_missing_dates(missing_dates: list[date]) -> None:
+    """Display missing dates."""
+    if not missing_dates:
+        log_info("  ✅ No missing dates")
+        return
+
+    log_info(f"  Missing dates: {len(missing_dates)}")
+    if len(missing_dates) <= MAX_MISSING_DATES_DISPLAY:
+        for missing_date in missing_dates:
+            log_info(f"    - {missing_date}")
+    else:
+        log_info(
+            f"    First 5: {', '.join(str(d) for d in missing_dates[:5])}",
+        )
+        log_info(
+            f"    Last 5: {', '.join(str(d) for d in missing_dates[-5:])}",
+        )
+
+
+def _display_transaction_stats(
+    date_counts: dict[str, int],
+    transactions: list[dict[str, str]],
+    min_date: date,
+    max_date: date,
+) -> None:
+    """Display transaction statistics."""
+    log_info(f"  Date range: {min_date} to {max_date}")
+    log_info(f"  Total transactions: {len(transactions)}")
+    log_info(f"  Days with transactions: {len(date_counts)}")
+    log_info(f"  Days in range: {(max_date - min_date).days + 1}")
+
+
+def _display_busiest_days(date_counts: dict[str, int]) -> None:
+    """Display busiest and quietest days."""
+    sorted_dates = sorted(date_counts.items(), key=lambda x: x[1], reverse=True)
+
+    if not sorted_dates:
+        return
+
+    log_info("  📈 Top 10 busiest days:")
+    for date, count in sorted_dates[:10]:
+        log_info(f"    {date}: {count} transactions")
+
+    if len(sorted_dates) > MAX_QUIETEST_DAYS_DISPLAY:
+        log_info("  📉 Quietest days:")
+        for date, count in sorted_dates[-MAX_QUIETEST_DAYS_DISPLAY:]:
+            log_info(f"    {date}: {count} transactions")
+
+
+def _analyze_account_coverage(
+    account_name: str,
+    account_number: str,
+    db: DatabaseManager,
+) -> None:
+    """Analyze coverage for a single account."""
+    log_info(f"\n📋 Account: {account_name} ({account_number})")
+
+    # Get transactions for this account
+    transactions = db.get_transactions_by_account(account_number)
+
+    if not transactions:
+        log_info("  No transactions found")
+        return
+
+    # Group transactions by date
+    date_counts, dates = _group_transactions_by_date(transactions)
+
+    if not dates:
+        log_info("  No valid transaction dates found")
+        return
+
+    # Find date range
+    min_date = min(dates)
+    max_date = max(dates)
+
+    # Display statistics
+    _display_transaction_stats(date_counts, transactions, min_date, max_date)
+
+    # Show missing dates
+    missing_dates = _find_missing_dates(min_date, max_date, date_counts)
+    _display_missing_dates(missing_dates)
+
+    # Show transaction count by date
+    _display_busiest_days(date_counts)
 
 
 @cli_error_handler
@@ -75,81 +197,7 @@ def coverage(
         for acc in accounts:
             account_name = acc.get("name", "Unknown")
             account_number = acc.get("account_number", "Unknown")
-
-            log_info(f"\n📋 Account: {account_name} ({account_number})")
-
-            # Get transactions for this account
-            transactions = db.get_transactions_by_account(account_number)
-
-            if not transactions:
-                log_info("  No transactions found")
-                continue
-
-            # Group transactions by date
-            date_counts: dict[str, int] = defaultdict(int)
-            dates = []
-
-            for tx in transactions:
-                try:
-                    tx_date = datetime.fromisoformat(
-                        tx["date"],
-                    ).date()
-                    date_counts[str(tx_date)] += 1
-                    dates.append(tx_date)
-                except Exception as e:
-                    log_info(
-                        f"DEBUG: Error parsing date for transaction: {tx.get('date')} - {e}",
-                    )
-                    continue
-
-            if not dates:
-                log_info("  No valid transaction dates found")
-                continue
-
-            # Find date range
-            min_date = min(dates)
-            max_date = max(dates)
-
-            log_info(f"  Date range: {min_date} to {max_date}")
-            log_info(f"  Total transactions: {len(transactions)}")
-            log_info(f"  Days with transactions: {len(date_counts)}")
-            log_info(f"  Days in range: {(max_date - min_date).days + 1}")
-
-            # Show missing dates
-            missing_dates = []
-            current_date = min_date
-            while current_date <= max_date:
-                if current_date not in date_counts:
-                    missing_dates.append(current_date)
-                current_date += timedelta(days=1)
-
-            if missing_dates:
-                log_info(f"  Missing dates: {len(missing_dates)}")
-                if len(missing_dates) <= MAX_MISSING_DATES_DISPLAY:
-                    for missing_date in missing_dates:
-                        log_info(f"    - {missing_date}")
-                else:
-                    log_info(
-                        f"    First 5: {', '.join(str(d) for d in missing_dates[:5])}",
-                    )
-                    log_info(
-                        f"    Last 5: {', '.join(str(d) for d in missing_dates[-5:])}",
-                    )
-            else:
-                log_info("  ✅ No missing dates")
-
-            # Show transaction count by date (top 10 and bottom 10)
-            sorted_dates = sorted(date_counts.items(), key=lambda x: x[1], reverse=True)
-
-            if sorted_dates:
-                log_info("  📈 Top 10 busiest days:")
-                for date, count in sorted_dates[:10]:
-                    log_info(f"    {date}: {count} transactions")
-
-                if len(sorted_dates) > MAX_QUIETEST_DAYS_DISPLAY:
-                    log_info("  📉 Quietest days:")
-                    for date, count in sorted_dates[-MAX_QUIETEST_DAYS_DISPLAY:]:
-                        log_info(f"    {date}: {count} transactions")
+            _analyze_account_coverage(account_name, account_number, db)
 
     except Exception as e:
         log_error(f"Error analyzing coverage: {e}")

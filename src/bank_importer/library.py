@@ -30,13 +30,14 @@ if TYPE_CHECKING:
     from bank_importer.models.database import DatabaseManager
     from bank_importer.models.transaction import Transaction
     from bank_importer.translation_service import TranslationService
-
-from bank_importer.config import ConfigManager
+else:
+    from bank_importer.config import ConfigManager  # noqa: TC001
 from bank_importer.interfaces.parser import Parser
 from bank_importer.interfaces.target import Target, TargetResult
-from bank_importer.models.enums import Language
+from bank_importer.models.enums import Language, get_language_en, get_language_th
 from bank_importer.models.transaction import Transaction
 from bank_importer.parser_detector import ParserDetector
+from bank_importer.telemetry import trace_function, trace_span
 
 # Translation service import (optional dependency)
 _translation_service_func: Any | None = None
@@ -207,6 +208,143 @@ def parse_file(
 # ============================================================================
 
 
+def _ensure_managers(
+    config_manager: "ConfigManager | None",
+    db_manager: "DatabaseManager | None",
+) -> tuple["ConfigManager", "DatabaseManager"]:
+    """Ensure config and database managers are available."""
+    from bank_importer.models.database import DatabaseManager
+
+    if db_manager is None:
+        if config_manager is None:
+            msg = "Either db_manager or config_manager must be provided"
+            raise ValueError(msg)
+        db_manager = DatabaseManager(config_manager.get_database_url())
+
+    if config_manager is None:
+        from bank_importer.config import ConfigManager
+
+        config_manager = ConfigManager()
+
+    return config_manager, db_manager
+
+
+def _create_import_session(
+    file_path: Path,
+    account_config: dict[str, Any] | None,
+    db_manager: "DatabaseManager",
+) -> int | None:
+    """Create import session and return session_id or None if failed."""
+    from datetime import UTC, datetime
+
+    from bank_importer.models.enums import ImportStatus
+    from bank_importer.models.import_session import ImportSession
+
+    import_session = ImportSession(
+        account_name=account_config.get("name", "unknown")
+        if account_config
+        else "unknown",
+        bank_name=account_config.get("bank_name", "unknown")
+        if account_config
+        else "unknown",
+        session_name=_generate_session_name(file_path),
+        file_path=str(file_path),
+        file_hash=_calculate_file_hash(file_path),
+        status=ImportStatus.PROCESSING.value,
+        started_at=datetime.now(UTC),
+    )
+
+    try:
+        return db_manager.create_import_session(import_session)
+    except ValueError:
+        return None
+
+
+def _parse_file_with_error_handling(
+    file_path: Path,
+    parser_name: str | None,
+    account_config: dict[str, Any] | None,
+    config_manager: "ConfigManager",
+    db_manager: "DatabaseManager",
+    session_id: int | None,
+    *,
+    auto_detect: bool,
+) -> list[Transaction] | None:
+    """Parse file and return transactions list, or None if parsing failed."""
+    from datetime import UTC, datetime
+
+    from bank_importer.models.enums import ImportStatus
+
+    try:
+        return list(
+            parse_file(
+                file_path,
+                parser_name=parser_name,
+                account_config=account_config,
+                config_manager=config_manager,
+                auto_detect=auto_detect,
+            ),
+        )
+    except Exception as e:
+        if session_id is not None:
+            error_message = str(e)
+            db_manager.update_import_session(
+                session_id,
+                status=ImportStatus.FAILED.value,
+                error_count=1,
+                error_message=error_message,
+                completed_at=datetime.now(UTC),
+            )
+        return None
+
+
+def _process_transactions(
+    transactions_list: list[Transaction],
+    db_manager: "DatabaseManager",
+    session_id: int,
+    config_manager: "ConfigManager | None",
+    account_config: dict[str, Any] | None,
+    *,
+    translate: bool,
+) -> tuple[list[Transaction], list[Transaction]]:
+    """Process and store transactions, returning new and skipped lists."""
+    with trace_span(
+        "process_transactions",
+        {"transaction_count": len(transactions_list), "translate": translate},
+    ):
+        new_transactions = []
+        skipped_transactions = []
+        translation_service = None
+
+        if translate and config_manager:
+            translation_service = _get_translation_service(
+                config_manager, account_config
+            )
+
+        for transaction in transactions_list:
+            # Translate if enabled
+            if translate and translation_service and account_config:
+                _translate_transaction(transaction, account_config, translation_service)
+
+            # Store in database
+            _, is_new = db_manager.add_transaction(transaction)
+
+            if is_new:
+                new_transactions.append(transaction)
+            else:
+                skipped_transactions.append(transaction)
+
+            # Update import session progress
+            total_processed = len(new_transactions) + len(skipped_transactions)
+            db_manager.update_import_session(
+                session_id,
+                processed_transactions=total_processed,
+            )
+
+        return new_transactions, skipped_transactions
+
+
+@trace_function(attributes={"operation": "import_file"})  # type: ignore[misc]
 def import_file(
     file_path: Path | str,
     parser_name: str | None = None,
@@ -259,22 +397,12 @@ def import_file(
     """
     from datetime import UTC, datetime
 
-    from bank_importer.models.database import DatabaseManager
     from bank_importer.models.enums import ImportStatus
-    from bank_importer.models.import_session import ImportSession
 
     file_path = Path(file_path)
 
     # Validate required parameters
-    if db_manager is None:
-        if config_manager is None:
-            msg = "Either db_manager or config_manager must be provided"
-            raise ValueError(msg)
-        db_manager = DatabaseManager(config_manager.get_database_url())
-
-    if config_manager is None:
-        # Create a minimal config manager for basic operations
-        config_manager = ConfigManager()
+    config_manager, db_manager = _ensure_managers(config_manager, db_manager)
 
     # Check if file has been imported (unless reprocessing)
     if not reprocess_existing:
@@ -289,61 +417,36 @@ def import_file(
             }
 
     # Create import session BEFORE parsing (so we can track failures)
-    import_session = ImportSession(
-        account_name=account_config.get("name", "unknown")
-        if account_config
-        else "unknown",
-        bank_name=account_config.get("bank_name", "unknown")
-        if account_config
-        else "unknown",
-        session_name=_generate_session_name(file_path),
-        file_path=str(file_path),
-        file_hash=_calculate_file_hash(file_path),
-        status=ImportStatus.PROCESSING.value,
-        started_at=datetime.now(UTC),
-    )
-
-    try:
-        session_id = db_manager.create_import_session(import_session)
-    except ValueError as e:
-        # File already processed or being processed
+    session_id = _create_import_session(file_path, account_config, db_manager)
+    if session_id is None:
         return {
             "transactions": [],
             "skipped": [],
             "session_id": None,
             "total_processed": 0,
             "error_count": 0,
-            "message": str(e),
+            "message": "File already processed or being processed",
         }
 
     # Parse the file (with error handling to mark session as failed)
-    try:
-        transactions_list = list(
-            parse_file(
-                file_path,
-                parser_name=parser_name,
-                account_config=account_config,
-                config_manager=config_manager,
-                auto_detect=auto_detect,
-            ),
-        )
-    except Exception as e:
-        # Mark import session as failed
-        error_message = str(e)
-        db_manager.update_import_session(
-            session_id,
-            status=ImportStatus.FAILED.value,
-            error_count=1,
-            error_message=error_message,
-            completed_at=datetime.now(UTC),
-        )
+    transactions_list = _parse_file_with_error_handling(
+        file_path,
+        parser_name,
+        account_config,
+        config_manager,
+        db_manager,
+        session_id,
+        auto_detect=auto_detect,
+    )
+
+    if transactions_list is None:
         return {
             "transactions": [],
             "skipped": [],
             "session_id": session_id,
             "total_processed": 0,
             "error_count": 1,
-            "message": error_message,
+            "message": "Parsing failed",
         }
 
     if not transactions_list:
@@ -365,32 +468,14 @@ def import_file(
         }
 
     # Translate and store transactions
-    new_transactions = []
-    skipped_transactions = []
-    translation_service = None
-
-    if translate and config_manager:
-        translation_service = _get_translation_service(config_manager, account_config)
-
-    for transaction in transactions_list:
-        # Translate if enabled
-        if translate and translation_service and account_config:
-            _translate_transaction(transaction, account_config, translation_service)
-
-        # Store in database
-        _, is_new = db_manager.add_transaction(transaction)
-
-        if is_new:
-            new_transactions.append(transaction)
-        else:
-            skipped_transactions.append(transaction)
-
-        # Update import session progress
-        total_processed = len(new_transactions) + len(skipped_transactions)
-        db_manager.update_import_session(
-            session_id,
-            processed_transactions=total_processed,
-        )
+    new_transactions, skipped_transactions = _process_transactions(
+        transactions_list,
+        db_manager,
+        session_id,
+        config_manager,
+        account_config,
+        translate=translate,
+    )
 
     # Determine session status
     total_transactions = len(new_transactions) + len(skipped_transactions)
@@ -666,13 +751,21 @@ def translate_text(
             msg,
         )
 
-    service = get_translation_service(
+    if _translation_service_func is None:
+        msg = (
+            "Translation service not available. Install with: uv sync --group translate"
+        )
+        raise ImportError(
+            msg,
+        )
+    service = _translation_service_func(
         api_key=api_key,
         source_language=source_language or get_language_th(),
         target_language=target_language or get_language_en(),
         term_mappings=term_mappings,
     )
-    return service.translate_description(text)
+    result = service.translate_description(text)
+    return str(result) if result else text
 
 
 def _get_translation_service(

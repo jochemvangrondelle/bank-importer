@@ -31,25 +31,86 @@ from bank_importer.logging_config import (
 from bank_importer.models.database import DatabaseManager
 
 
+def _get_items_to_clean(
+    output_path: Path,
+    db_path: Path,
+    *,
+    db_only: bool,
+    output_only: bool,
+) -> list[str]:
+    """Get list of items that will be cleaned."""
+    items_to_clean = []
+    if not db_only:
+        if output_path.exists():
+            items_to_clean.append(f"Output directory: {output_path}")
+        else:
+            log_warning(f"Output directory does not exist: {output_path}")
+    if not output_only:
+        if db_path.exists():
+            items_to_clean.append(f"Database file: {db_path}")
+        else:
+            log_warning(f"Database file does not exist: {db_path}")
+    return items_to_clean
+
+
+def _confirm_clean(*, force: bool) -> bool:
+    """Confirm clean operation with user unless --force is used."""
+    if force:
+        return True
+    try:
+        confirm = typer.confirm(
+            "⚠️  This will permanently delete all exported files and database data. Continue?",
+            default=False,
+        )
+        if not confirm:
+            get_logger("cli").info("Clean operation cancelled by user")
+            return False
+        return True
+    except Exception:
+        log_error("Confirmation required. Use --force to skip confirmation.")
+        raise typer.Exit(1) from None
+
+
+def _clean_output_directory(output_path: Path) -> None:
+    """Clean output directory or file."""
+    if output_path.is_dir():
+        shutil.rmtree(output_path)
+        log_success(f"Cleaned output directory: {output_path}")
+    else:
+        output_path.unlink()
+        log_success(f"Cleaned output file: {output_path}")
+
+
+def _clean_database(database_url: str, db_path: Path) -> None:
+    """Clean database file and associated files."""
+    DatabaseManager(database_url)
+    db_path.unlink()
+    log_success(f"Cleaned database file: {db_path}")
+    for suffix in [".wal", ".shm", "-journal"]:
+        wal_path = Path(str(db_path) + suffix)
+        if wal_path.exists():
+            wal_path.unlink()
+            log_info(f"Cleaned database file: {wal_path}")
+
+
 @cli_error_handler
 def clean(
     config_file: str = CONFIG_FILE_PARAM,
     *,
     verbose: bool = VERBOSE_PARAM,
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),  # noqa: FBT003
     output_only: bool = typer.Option(
-        False,
+        False,  # noqa: FBT003
         "--output-only",
         help="Only clean output directories, not database",
     ),
     db_only: bool = typer.Option(
-        False,
+        False,  # noqa: FBT003
         "--db-only",
         help="Only clean database, not output directories",
     ),
 ) -> None:
     """**Clean** output directories and internal database."""
-    # Setup logging
     console_level = "DEBUG" if verbose else "INFO"
     setup_logging(
         enable_rich=True,
@@ -57,32 +118,18 @@ def clean(
         file_level="DEBUG",
     )
     logger = get_logger("cli")
-
     logger.info("🧹 Starting Bank Importer - Clean Mode")
 
-    # Load configuration
     config_manager = ConfigManager(Path(config_file))
     output_dir = config_manager.config.get("output", {}).get("output_dir", "data/out")
     database_url = config_manager.get_database_url()
 
-    # Get paths to clean
     output_path = Path(output_dir)
     db_path = Path(database_url.replace("sqlite:///", ""))
 
-    # Show what will be cleaned
-    items_to_clean = []
-
-    if not db_only:
-        if output_path.exists():
-            items_to_clean.append(f"Output directory: {output_path}")
-        else:
-            log_warning(f"Output directory does not exist: {output_path}")
-
-    if not output_only:
-        if db_path.exists():
-            items_to_clean.append(f"Database file: {db_path}")
-        else:
-            log_warning(f"Database file does not exist: {db_path}")
+    items_to_clean = _get_items_to_clean(
+        output_path, db_path, db_only=db_only, output_only=output_only
+    )
 
     if not items_to_clean:
         log_warning(
@@ -90,56 +137,23 @@ def clean(
         )
         return
 
-    # Show what will be cleaned
     logger.info("The following items will be cleaned:")
     for item in items_to_clean:
         logger.info("  - %s", item)
 
-    # Confirm with user unless --force is used
-    if not force:
-        try:
-            confirm = typer.confirm(
-                "⚠️  This will permanently delete all exported files and database data. Continue?",
-                default=False,
-            )
-            if not confirm:
-                logger.info("Clean operation cancelled by user")
-                return
-        except Exception:
-            # If confirmation fails (e.g., in non-interactive mode), require --force
-            log_error("Confirmation required. Use --force to skip confirmation.")
-            raise typer.Exit(1) from None
+    if not _confirm_clean(force=force):
+        return
 
-    # Clean output directories
     if not db_only and output_path.exists():
         try:
-            if output_path.is_dir():
-                shutil.rmtree(output_path)
-                log_success(f"Cleaned output directory: {output_path}")
-            else:
-                output_path.unlink()
-                log_success(f"Cleaned output file: {output_path}")
+            _clean_output_directory(output_path)
         except Exception as e:
             log_error(f"Failed to clean output directory {output_path}: {e}")
             raise typer.Exit(1) from e
 
-    # Clean database
     if not output_only and db_path.exists():
         try:
-            # Close any existing database connections
-            DatabaseManager(database_url)
-
-            # Delete the database file
-            db_path.unlink()
-            log_success(f"Cleaned database file: {db_path}")
-
-            # Also clean any associated files (like WAL files)
-            for suffix in [".wal", ".shm", "-journal"]:
-                wal_path = Path(str(db_path) + suffix)
-                if wal_path.exists():
-                    wal_path.unlink()
-                    log_info(f"Cleaned database file: {wal_path}")
-
+            _clean_database(database_url, db_path)
         except Exception as e:
             log_error(f"Failed to clean database {db_path}: {e}")
             raise typer.Exit(1) from e

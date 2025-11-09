@@ -36,12 +36,12 @@ def translate(
     text: str = typer.Option(None, "--text", "-t", help="Translate specific text"),
     *,
     clear_cache: bool = typer.Option(
-        False,
+        False,  # noqa: FBT003
         "--clear-cache",
         help="Clear translation cache",
     ),
     stats: bool = typer.Option(
-        False,
+        False,  # noqa: FBT003
         "--stats",
         help="Show translation cache statistics",
     ),

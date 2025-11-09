@@ -14,7 +14,7 @@
 
 import tempfile
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
@@ -34,6 +34,69 @@ from bank_importer.models.enums import (
 )
 
 router = APIRouter()
+
+
+def _build_account_config_from_form(
+    account_config_name: str | None,
+    parser_name: ParserName | str | None,
+    account_number: str | None,
+    account_name: str | None,
+    bank_name: str | None,
+    currency: Currency,
+    country_code: CountryCode,
+    password: str | None,
+    config_manager: ConfigManager,
+) -> tuple[dict[str, Any], ParserName | str | None]:
+    """Build account config from form data or config."""
+    if account_config_name:
+        account_config = config_manager.get_account_config(account_config_name)
+        if not account_config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Account configuration '{account_config_name}' not found",
+            )
+        # Use parser from config if not provided
+        if not parser_name and account_config.get("parser"):
+            parser_str = account_config.get("parser")
+            try:
+                parser_name = ParserName(parser_str)
+            except (ValueError, AttributeError):
+                parser_name = None
+        return account_config, parser_name
+
+    # Validate required fields for direct mode
+    if not account_number or not account_name or not bank_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Either 'account_config_name' or all of 'account_number', "
+                "'account_name', and 'bank_name' must be provided"
+            ),
+        )
+    # Build account config from form data
+    currency_str = currency.value if isinstance(currency, Currency) else currency
+    account_config = {
+        "name": account_name.lower().replace(" ", "_"),
+        "account_number": account_number,
+        "account_name": account_name,
+        "bank_name": bank_name,
+        "currency": currency_str,
+        "country_code": country_code,
+    }
+    if password:
+        account_config["password"] = password
+    return account_config, parser_name
+
+
+async def _save_uploaded_file_async(file: UploadFile) -> Path:
+    """Save uploaded file to temporary location."""
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=Path(file.filename or "").suffix if file.filename else "",
+    ) as tmp_file:
+        content = await file.read()
+        tmp_file.write(content)
+        return Path(tmp_file.name)
 
 
 @router.post(
@@ -75,11 +138,11 @@ async def parse_file_endpoint(
     currency: Annotated[
         Currency,
         Form(description="Currency code (ISO 4217)"),
-    ] = Currency.THB,
+    ] = cast("Currency", getattr(Currency, "THB", Currency("THB"))),
     country_code: Annotated[
         CountryCode,
         Form(description="Country code (ISO 3166-1 alpha-2)"),
-    ] = CountryCode.TH,
+    ] = cast("CountryCode", getattr(CountryCode, "TH", CountryCode("TH"))),
     password: Annotated[
         str | None,
         Form(
@@ -96,8 +159,9 @@ async def parse_file_endpoint(
             description="Parser detection behavior: automatic (auto-detect if not specified) or manual (require parser to be specified)",
         ),
     ] = ParserDetectionBehavior.AUTOMATIC,
-    config_manager: ConfigManager = Depends(get_config_manager),
-    _: dict = Depends(require_auth),
+    *,
+    config_manager: Annotated[ConfigManager, Depends(get_config_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> ParseFileResponse:
     """Parse a bank statement file and return transactions (synchronous, no database).
 
@@ -136,63 +200,29 @@ async def parse_file_endpoint(
 
     **Response**: Returns list of transactions as JSON.
     """
-    # Save uploaded file to temporary location
-    with tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=Path(file.filename).suffix,
-    ) as tmp_file:
-        content = await file.read()
-        tmp_file.write(content)
-        tmp_path = Path(tmp_file.name)
-
+    tmp_path = None
     try:
-        # Load account config if account_config_name is provided
-        if account_config_name:
-            account_config = config_manager.get_account_config(account_config_name)
-            if not account_config:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Account configuration '{account_config_name}' not found",
-                )
-            # Use parser from config if not provided
-            if not parser_name and account_config.get("parser"):
-                parser_str = account_config.get("parser")
-                # Try to convert to enum if it's a valid parser name
-                try:
-                    parser_name = ParserName(parser_str)
-                except (ValueError, AttributeError):
-                    parser_name = None  # Will use string value
-        else:
-            # Validate required fields for direct mode
-            if not account_number or not account_name or not bank_name:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(
-                        "Either 'account_config_name' or all of 'account_number', "
-                        "'account_name', and 'bank_name' must be provided"
-                    ),
-                )
-            # Build account config from form data
-            # Convert enum to string if needed
-            currency_str = (
-                currency.value if isinstance(currency, Currency) else currency
-            )
-            account_config = {
-                "name": account_name.lower().replace(" ", "_"),
-                "account_number": account_number,
-                "account_name": account_name,
-                "bank_name": bank_name,
-                "currency": currency_str,
-                "country_code": country_code,
-            }
-            # Add password if provided (direct mode)
-            if password:
-                account_config["password"] = password
+        # Save uploaded file to temporary location
+        tmp_path = await _save_uploaded_file_async(file)
 
-        # Parse the file using library function
-        # Convert enum to string and boolean for library function
+        # Build account config
+        account_config, resolved_parser_name = _build_account_config_from_form(
+            account_config_name,
+            parser_name,
+            account_number,
+            account_name,
+            bank_name,
+            currency,
+            country_code,
+            password,
+            config_manager,
+        )
+
+        # Parse the file
         parser_name_str = (
-            parser_name.value if isinstance(parser_name, ParserName) else parser_name
+            resolved_parser_name.value
+            if isinstance(resolved_parser_name, ParserName)
+            else resolved_parser_name
         )
         auto_detect = parser_detection_behavior == ParserDetectionBehavior.AUTOMATIC
         transactions_list = list(
@@ -208,7 +238,6 @@ async def parse_file_endpoint(
         if parser_name_str:
             used_parser = parser_name_str
         else:
-            # Auto-detected - we'd need to call detect_parser, but for now use the provided or default
             from bank_importer.library import detect_parser
 
             detected = detect_parser(tmp_path)
@@ -234,7 +263,7 @@ async def parse_file_endpoint(
         ) from e
     finally:
         # Clean up temporary file
-        if tmp_path.exists():
+        if tmp_path is not None and tmp_path.exists():
             tmp_path.unlink()
 
 
@@ -281,11 +310,11 @@ async def parse_and_export_file(
     currency: Annotated[
         Currency,
         Form(description="Currency code (ISO 4217)"),
-    ] = Currency.THB,
+    ] = cast("Currency", getattr(Currency, "THB", Currency("THB"))),
     country_code: Annotated[
         CountryCode,
         Form(description="Country code (ISO 3166-1 alpha-2)"),
-    ] = CountryCode.TH,
+    ] = cast("CountryCode", getattr(CountryCode, "TH", CountryCode("TH"))),
     password: Annotated[
         str | None,
         Form(
@@ -306,8 +335,9 @@ async def parse_and_export_file(
             description="Parser detection behavior: automatic (auto-detect if not specified) or manual (require parser to be specified)",
         ),
     ] = ParserDetectionBehavior.AUTOMATIC,
-    config_manager: ConfigManager = Depends(get_config_manager),
-    _: dict = Depends(require_auth),
+    *,
+    config_manager: Annotated[ConfigManager, Depends(get_config_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> FileResponse:
     """Parse a bank statement file and export to CSV/YAML (synchronous, no database).
 
@@ -350,67 +380,31 @@ async def parse_and_export_file(
 
     **Response**: Returns the exported file (CSV, YAML, etc.) as a download.
     """
-    # Save uploaded file to temporary location
-    with tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=Path(file.filename).suffix,
-    ) as tmp_file:
-        content = await file.read()
-        tmp_file.write(content)
-        tmp_path = Path(tmp_file.name)
-
+    tmp_path = None
     # Create temporary output directory
     with tempfile.TemporaryDirectory() as tmp_output_dir:
         try:
-            # Load account config if account_config_name is provided
-            if account_config_name:
-                account_config = config_manager.get_account_config(account_config_name)
-                if not account_config:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Account configuration '{account_config_name}' not found",
-                    )
-                # Use parser from config if not provided
-                if not parser_name and account_config.get("parser"):
-                    parser_name = account_config.get("parser")
-            else:
-                # Validate required fields for direct mode
-                if not account_number or not account_name or not bank_name:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=(
-                            "Either 'account_config_name' or all of 'account_number', "
-                            "'account_name', and 'bank_name' must be provided"
-                        ),
-                    )
-                # Build account config from form data
-                # Convert enums to strings if needed
-                currency_str = (
-                    currency.value if isinstance(currency, Currency) else currency
-                )
-                country_code_str = (
-                    country_code.value
-                    if isinstance(country_code, CountryCode)
-                    else country_code
-                )
-                account_config = {
-                    "name": account_name.lower().replace(" ", "_"),
-                    "account_number": account_number,
-                    "account_name": account_name,
-                    "bank_name": bank_name,
-                    "currency": currency_str,
-                    "country_code": country_code_str,
-                }
-                # Add password if provided (direct mode)
-                if password:
-                    account_config["password"] = password
+            # Save uploaded file to temporary location
+            tmp_path = await _save_uploaded_file_async(file)
 
-            # Parse the file using library function
-            # Convert enum to string and boolean for library function
+            # Build account config
+            account_config, resolved_parser_name = _build_account_config_from_form(
+                account_config_name,
+                parser_name,
+                account_number,
+                account_name,
+                bank_name,
+                currency,
+                country_code,
+                password,
+                config_manager,
+            )
+
+            # Parse the file
             parser_name_str = (
-                parser_name.value
-                if isinstance(parser_name, ParserName)
-                else parser_name
+                resolved_parser_name.value
+                if isinstance(resolved_parser_name, ParserName)
+                else resolved_parser_name
             )
             auto_detect = parser_detection_behavior == ParserDetectionBehavior.AUTOMATIC
             transactions_list = list(
@@ -428,8 +422,7 @@ async def parse_and_export_file(
                     detail="No transactions found in file",
                 )
 
-            # Export transactions using library function
-            # Convert enum to string if needed
+            # Export transactions
             target_name_str = (
                 target_name.value
                 if isinstance(target_name, TargetName)
@@ -484,7 +477,7 @@ async def parse_and_export_file(
             ) from e
         finally:
             # Clean up temporary input file
-            if tmp_path.exists():
+            if tmp_path and tmp_path.exists():
                 tmp_path.unlink()
 
 
@@ -497,7 +490,7 @@ async def parse_file_by_path(
     request: ParseFileRequest,
     file_path: Annotated[str, Form(description="Path to file on server to parse")],
     config_manager: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> ParseFileResponse:
     """Parse a file by path and return transactions (synchronous, no database).
 
@@ -543,7 +536,7 @@ async def parse_file_by_path(
             else request.country_code
         )
         account_config: dict[str, Any] = {
-            "name": request.account_name.lower().replace(" ", "_"),
+            "name": (request.account_name or "").lower().replace(" ", "_"),
             "account_number": request.account_number,
             "account_name": request.account_name,
             "bank_name": request.bank_name,

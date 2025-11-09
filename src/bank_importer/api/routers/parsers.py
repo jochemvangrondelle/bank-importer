@@ -87,10 +87,10 @@ async def list_parsers(
         parsers.append(
             ParserInfoResponse(
                 name=parser_name,
-                bank_type=info["bank_type"],
-                supported_extensions=info["extensions"],
+                bank_type=str(info["bank_type"]),
+                supported_extensions=list(info["extensions"]),
                 supported_patterns=[],
-                description=info["description"],
+                description=str(info["description"]) if info["description"] else None,
             ),
         )
 

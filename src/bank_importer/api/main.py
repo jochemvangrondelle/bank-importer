@@ -12,6 +12,7 @@
 
 """FastAPI application main module."""
 
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -19,6 +20,37 @@ from fastapi.responses import JSONResponse
 from bank_importer import __version__
 from bank_importer.api.config import settings
 from bank_importer.api.middleware import SecurityHeadersMiddleware
+from bank_importer.telemetry import initialize_telemetry
+
+# Initialize OpenTelemetry before creating FastAPI app
+initialize_telemetry()
+
+# Initialize Sentry SDK before creating FastAPI app (only if DSN is configured)
+if settings.sentry_dsn:
+    init_kwargs: dict[str, str | bool | float] = {
+        "dsn": settings.sentry_dsn,
+        # Add data like request headers and IP for users,
+        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        "send_default_pii": settings.sentry_send_default_pii,
+        # Enable sending logs to Sentry
+        "enable_logs": settings.sentry_enable_logs,
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for tracing.
+        "traces_sample_rate": settings.sentry_traces_sample_rate,
+        # Set profile_session_sample_rate to 1.0 to profile 100%
+        # of profile sessions.
+        "profile_session_sample_rate": settings.sentry_profile_session_sample_rate,
+    }
+    # Add profile_lifecycle if configured
+    if settings.sentry_profile_lifecycle:
+        init_kwargs["profile_lifecycle"] = settings.sentry_profile_lifecycle
+    _ = sentry_sdk.init(**init_kwargs)  # type: ignore[arg-type]
+
+# Import FastAPI instrumentation after telemetry is initialized
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+except ImportError:
+    FastAPIInstrumentor = None  # type: ignore[assignment, misc]
 from bank_importer.api.routers import (
     auth,
     config,
@@ -58,11 +90,15 @@ app.add_middleware(
 # Add security headers
 app.add_middleware(SecurityHeadersMiddleware)
 
+# Instrument FastAPI with OpenTelemetry
+if FastAPIInstrumentor is not None:
+    FastAPIInstrumentor.instrument_app(app)
+
 
 # Exception handlers
 @app.exception_handler(Exception)
 async def global_exception_handler(
-    request: Request,
+    _request: Request,
     exc: Exception,
 ) -> JSONResponse:
     """Global exception handler."""

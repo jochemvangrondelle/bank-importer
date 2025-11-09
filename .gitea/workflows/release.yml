@@ -105,7 +105,7 @@ jobs:
       - name: Build Docker image (multi-platform)
         run: |
           # Get version from semantic-release
-          VERSION=$(uv run --python 3.11 python -c "from bank_importer_th import __version__; print(__version__)")
+          VERSION=$(uv run --python 3.11 python -c "from bank_importer import __version__; print(__version__)")
           echo "Building Docker image version: $VERSION for multiple platforms"
 
           # Determine tags based on branch
@@ -113,14 +113,14 @@ jobs:
           echo "Building for branch: $BRANCH_NAME"
 
           # Set up tags based on branch
-          TAGS="--tag reg.jochempiya.org/jochem/bank-importer-th:$VERSION"
+          TAGS="--tag reg.jochempiya.org/jochem/bank-importer:$VERSION"
 
           if [[ "$BRANCH_NAME" == "develop" || "$BRANCH_NAME" == "beta" ]]; then
             echo "Adding 'latest' tag for beta release"
-            TAGS="$TAGS --tag reg.jochempiya.org/jochem/bank-importer-th:latest"
+            TAGS="$TAGS --tag reg.jochempiya.org/jochem/bank-importer:latest"
           elif [[ "$BRANCH_NAME" == "stable" || "$BRANCH_NAME" == "main" ]]; then
             echo "Adding 'stable' tag for stable release"
-            TAGS="$TAGS --tag reg.jochempiya.org/jochem/bank-importer-th:stable"
+            TAGS="$TAGS --tag reg.jochempiya.org/jochem/bank-importer:stable"
           fi
 
           # Build multi-platform image with Buildx

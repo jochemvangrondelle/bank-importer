@@ -27,7 +27,7 @@ import pytz
 try:
     import pypdfium2 as pdfium
 except ImportError:
-    pdfium = None  # type: ignore[assignment, misc]
+    pdfium = None
 
 from bank_importer.interfaces.parser import Parser, ReconciliationTotals
 from bank_importer.logging_config import log_error
@@ -709,9 +709,6 @@ class ScbPdfParser(Parser):
                 currency=account_config.get("currency", "THB"),
                 transaction_type=transaction_type,
                 account_number=account_config.get("account_number", ""),
-                account_name=account_config.get("account_name", ""),
-                bank_name=account_config.get("bank_name", "SCB"),
-                branch_name=account_config.get("branch_name", ""),
                 channel=channel,
                 reference=account_config.get("reference", ""),
                 source_file=str(file_path),

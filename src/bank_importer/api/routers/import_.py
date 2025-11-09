@@ -41,6 +41,7 @@ router = APIRouter()
 def _process_import_sync(
     processor: Any,
     account_name: str | None,
+    *,
     reprocess_existing: bool,
 ) -> list[dict[str, Any]]:
     """Synchronous import processing (runs in background thread).
@@ -89,9 +90,9 @@ def _process_import_sync(
                     ),
                 )
                 results.extend(account_results)
-    except Exception as e:
+    except Exception:
         # Log error - in production, you'd want to track this in the job
-        print(f"Import error: {e}")
+        pass
     return results
 
 
@@ -103,8 +104,8 @@ def _process_import_sync(
 async def import_files(
     request: ImportRequest,
     background_tasks: BackgroundTasks,
-    processor=Depends(get_processor),
-    _: dict = Depends(require_auth),
+    processor: Annotated[Any, Depends(get_processor)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> ImportJobResponse:
     """Import files (async job).
 
@@ -124,7 +125,7 @@ async def import_files(
         _process_import_sync,
         processor,
         request.account_name,
-        reprocess_existing,
+        reprocess_existing=reprocess_existing,
     )
 
     return ImportJobResponse(
@@ -149,8 +150,9 @@ async def list_import_sessions(
         Query(ge=1, le=1000, description="Maximum number of results"),
     ] = 100,
     offset: Annotated[int, Query(ge=0, description="Number of results to skip")] = 0,
-    db: DatabaseManager = Depends(get_db_manager),
-    _: dict = Depends(require_auth),
+    *,
+    db: Annotated[DatabaseManager, Depends(get_db_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, Any]:
     """List import sessions."""
     if account_name:
@@ -182,7 +184,7 @@ async def list_import_sessions(
 async def get_import_session(
     session_id: int,
     db: Annotated[DatabaseManager, Depends(get_db_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> ImportSessionResponse:
     """Get import session."""
     session = db.get_import_session(session_id)
@@ -205,8 +207,9 @@ async def get_import_session_transactions(
         Query(ge=1, le=1000, description="Maximum number of results"),
     ] = 100,
     offset: Annotated[int, Query(ge=0, description="Number of results to skip")] = 0,
-    db: DatabaseManager = Depends(get_db_manager),
-    _: dict = Depends(require_auth),
+    *,
+    db: Annotated[DatabaseManager, Depends(get_db_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, Any]:
     """Get transactions for import session."""
     # Verify session exists
@@ -236,8 +239,8 @@ async def get_import_session_transactions(
 )
 async def import_file_sync(
     request: ImportFileSyncRequest,
-    processor=Depends(get_processor),
-    _: dict = Depends(require_auth),
+    processor: Annotated[Any, Depends(get_processor)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> ImportFileSyncResponse:
     """Import a single file synchronously (with database).
 

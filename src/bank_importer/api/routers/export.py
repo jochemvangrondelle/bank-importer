@@ -52,9 +52,9 @@ def _process_export_sync(
                         tgt_name,
                     )
                     results.update(target_results)
-    except Exception as e:
+    except Exception:
         # Log error - in production, you'd want to track this in the job
-        print(f"Export error: {e}")
+        pass
     return results
 
 
@@ -66,8 +66,8 @@ def _process_export_sync(
 async def export_transactions(
     request: ExportRequest,
     background_tasks: BackgroundTasks,
-    processor=Depends(get_processor),
-    _: dict = Depends(require_auth),
+    processor: Annotated[Any, Depends(get_processor)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> ExportJobResponse:
     """Export transactions (async job).
 
@@ -107,8 +107,9 @@ async def list_export_sessions(
         Query(ge=1, le=1000, description="Maximum number of results"),
     ] = 100,
     offset: Annotated[int, Query(ge=0, description="Number of results to skip")] = 0,
-    db: DatabaseManager = Depends(get_db_manager),
-    _: dict = Depends(require_auth),
+    *,
+    db: Annotated[DatabaseManager, Depends(get_db_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, Any]:
     """List export sessions."""
     sessions = db.get_export_sessions(target_name=target_name)
@@ -134,7 +135,7 @@ async def list_export_sessions(
 async def get_export_session(
     session_id: int,
     db: Annotated[DatabaseManager, Depends(get_db_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> ExportSessionResponse:
     """Get export session."""
     sessions = db.get_export_sessions()
@@ -156,7 +157,7 @@ async def get_export_session(
 async def download_export_file(
     session_id: int,
     db: Annotated[DatabaseManager, Depends(get_db_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> FileResponse:
     """Download export file."""
     sessions = db.get_export_sessions()

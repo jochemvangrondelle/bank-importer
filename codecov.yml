@@ -1,0 +1,51 @@
+# Codecov configuration for Bank Importer Thailand
+
+codecov:
+  require_ci_to_pass: true
+  notify:
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  # Target coverage percentage
+  status:
+    project:
+      default:
+        target: 90%
+        threshold: 1%
+        base: auto
+        branches: false
+    patch:
+      default:
+        target: 90%
+        threshold: 1%
+        base: auto
+        branches: false
+
+# Ignore patterns (files that don't need coverage)
+ignore:
+  - "**/__pycache__"
+  - "**/__init__.py"
+  - "**/tests/**"
+  - "**/test_*.py"
+  - "**/conftest.py"
+  - "**/build/**"
+  - "**/dist/**"
+  - "**/.venv/**"
+  - "**/venv/**"
+  - "**/packages/**"
+
+# Flags for different test types
+flags:
+  unittests:
+    paths:
+      - src/bank_importer
+
+# Comment on PRs
+comment:
+  layout: "reach,diff,flags,tree,reach"
+  behavior: default
+  require_changes: false

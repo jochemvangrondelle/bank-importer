@@ -173,3 +173,9 @@ frontend/playwright-report/
 # Node modules
 node_modules/
 frontend/node_modules/
+
+# Sensitive data
+.env
+coverage.json
+coverage.xml
+bandit-report.json

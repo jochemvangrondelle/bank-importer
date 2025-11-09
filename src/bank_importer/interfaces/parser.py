@@ -188,12 +188,12 @@ class Parser(ABC):
 
         # Calculate actual totals
         debits = [t for t in transactions if t.amount < 0]
-        credits = [t for t in transactions if t.amount > 0]
+        credit_transactions = [t for t in transactions if t.amount > 0]
 
         actual_debit_total = sum(abs(t.amount) for t in debits)
-        actual_credit_total = sum(t.amount for t in credits)
+        actual_credit_total = sum(t.amount for t in credit_transactions)
         actual_debit_count = len(debits)
-        actual_credit_count = len(credits)
+        actual_credit_count = len(credit_transactions)
 
         # Verify totals match
         errors = []

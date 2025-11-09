@@ -13,10 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Thai bank statement parsing (SCB, Krungsri, Amex)
 - Firefly-III integration
 - Multi-language transaction support
-- Basic CI/CD pipeline with Gitea Actions
+- GitHub Actions CI/CD pipeline
+- Comprehensive documentation
 
 ### Changed
 - Configured python-semantic-release for automated versioning
+- Optimized Docker images for smaller size and faster builds
+- Enhanced version management with branch-specific tags
 
 ### Fixed
 - N/A

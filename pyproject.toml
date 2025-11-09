@@ -1,32 +1,33 @@
 [project]
-name = "bank-importer-th"
-version = "0.1.0"
+name        = "bank-importer"
+version     = "0.1.0"
 description = "A Python application that parses Thai bank export PDFs and exports transactions to CSV format suitable for import into Firefly-III"
-authors = [{ name = "Jochem van Grondelle", email = "jochem@vangrondelle.net" }]
-readme = "README.md"
-license = { text = "GNU Affero General Public License v3" }
-keywords = ['python', 'bank', 'pdf', 'parser', 'firefly-iii', 'thailand', 'financial']
+authors     = [{ name = "Jochem van Grondelle", email = "jochem@vangrondelle.net" }]
+readme      = "README.md"
+license     = { text = "PolyForm Noncommercial License 1.0.0" }
+keywords    = ['python', 'bank', 'pdf', 'parser', 'firefly-iii', 'thailand', 'financial']
 requires-python = ">=3.11,<3.15"
 dependencies = [
-    "sqlmodel>=0.0.14",
-    "typer>=0.9.0",
+    # Core dependencies (always installed)
+    "duckdb>=1.1.0",
+    "alembic>=1.14.0",
     "toml>=0.10.0",
-    "pdfplumber>=0.11.7",
     "types-toml>=0.10.8.20240310",
-    "rich>=14.0.0",
-    "google-trans>=2.4.0",
-    "googletrans>=4.0.2",
     "pyyaml>=6.0.2",
     "pytz>=2024.1",
-    "deep-translator>=1.11.4",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
     "uv-dynamic-versioning",
-    "firefly-iii-api-client @ git+https://github.com/jochemvangrondelle/firefly-iii-client.git",
+    "pycountry @ git+https://github.com/jochemvangrondelle/pycountry.git@refactor/typing", # ISO 3166 country codes and ISO 4217 currency codes (typed fork)
+    "pypdfium2>=4.0.0",                                                                    # Rust-based PDF parser
+    "psutil>=5.9.0",                                                                       # For memory benchmarking
+    "sentry-sdk>=2.43.0",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
-    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "License :: Other/Proprietary License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
@@ -40,60 +41,88 @@ classifiers = [
 ]
 
     [project.urls]
-    Homepage      = "https://jochemvangrondelle.github.io/bank-importer-th/"
-    Repository    = "https://github.com/jochemvangrondelle/bank-importer-th"
-    Documentation = "https://jochemvangrondelle.github.io/bank-importer-th/"
-
-
-    [project.optional-dependencies]
-    dev = [
-        "pytest>=7.2.0",
-        "pytest-xdist>=3.0.0",
-        "pre-commit>=2.20.0",
-        "tox-uv>=1.11.3",
-        "mypy>=0.991",
-        "pytest-cov>=4.0.0",
-        "ruff>=0.11.5",
-        "pyright>=1.1.0",
-        "pytest-mock>=3.10.0",
-        "pytest-asyncio>=0.21.0",
-        "python-semantic-release>=8.0.0",
-        "commitizen>=3.0.0",
-    ]
-    docs = [
-        "mkdocs>=1.6.0",
-        "mkdocs-material>=9.5.0",
-        "mkdocs-git-revision-date-localized-plugin>=1.2.0",
-        "mkdocs-minify-plugin>=0.7.0",
-        "mkdocstrings[python]>=0.24.0",
-    ]
+    Homepage      = "https://jochemvangrondelle.github.io/bank-importer/"
+    Repository    = "https://github.com/jochemvangrondelle/bank-importer"
+    Documentation = "https://jochemvangrondelle.github.io/bank-importer/"
 
 
     [project.scripts]
-    bank-importer-th = "bank_importer_th.cli_main:app"
+    bank-importer     = "bank_importer.cli.main:app"
+    bank-importer-api = "bank_importer.api.run:main"
 
 [build-system]
 requires      = ["uv_build>=0.9.2,<0.10.0", "uv-dynamic-versioning"]
 build-backend = "uv_build"
+
+[tool.uv_build]
+package = "bank_importer"
 
 [tool.uv-dynamic-versioning]
 fallback-version = "0.0.0"
 
 
 [dependency-groups]
+cli = ["typer>=0.9.0", "rich>=14.0.0"]
+api = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.9",
+    "opentelemetry-api>=1.28.0",
+    "opentelemetry-sdk>=1.28.0",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-httpx>=0.48b0",
+    "opentelemetry-exporter-otlp-proto-http>=1.28.0",
+    "sentry-sdk[fastapi]>=2.43.0",
+]
+translate = ["google-trans>=2.4.0", "googletrans>=4.0.2", "deep-translator>=1.11.4"]
+firefly = [
+    "firefly-iii-api-client @ git+https://github.com/jochemvangrondelle/firefly-iii-client.git",
+]
+all = [
+    "typer>=0.9.0",
+    "rich>=14.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.9",
+    "google-trans>=2.4.0",
+    "googletrans>=4.0.2",
+    "deep-translator>=1.11.4",
+    "firefly-iii-api-client @ git+https://github.com/jochemvangrondelle/firefly-iii-client.git",
+    "opentelemetry-api>=1.28.0",
+    "opentelemetry-sdk>=1.28.0",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-httpx>=0.48b0",
+    "opentelemetry-exporter-otlp-proto-http>=1.28.0",
+    "sentry-sdk[fastapi]>=2.43.0",
+]
 dev = [
-    "python-semantic-release>=8.0.0",
-    "commitizen>=3.0.0",
+    "import-linter>=1.3.0",
     "pytest>=8.4.1",
     "pytest-xdist>=3.0.0",
     "pytest-cov>=6.2.1",
-    "ruff>=0.12.4",
+    "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.21.0",
+    "pre-commit>=2.20.0",
+    "tox-uv>=1.11.3",
     "mypy>=1.18.2",
+    "ruff>=0.12.4",
+    "pyright>=1.1.0",
+    "python-semantic-release>=8.0.0",
+    "commitizen>=3.0.0",
+    "poethepoet>=0.37.0",
     "types-requests>=2.32.4.20250913",
     "types-pyyaml>=6.0.12.20250915",
     "types-pytz>=2025.2.0.20250809",
     "types-setuptools>=80.9.0.20250822",
+    "types-python-jose>=3.3.0.20241015",
+    "httpx>=0.28.1",
+    "aider-install>=0.2.0",
 ]
+profiling = ["pyinstrument>=5.0.0", "snakeviz>=2.2.1", "scalene>=1.5.0", "viztracer>=0.18.0"]
 docs = [
     "mkdocs>=1.6.0",
     "mkdocs-material>=9.5.0",
@@ -102,30 +131,59 @@ docs = [
     "mkdocstrings[python]>=0.24.0",
 ]
 
+# Sentry Configuration
+# Sentry SDK configuration MUST be set via environment variables (DSNs are sensitive):
+#
+# General Python/CLI Sentry (SENTRY_ prefix):
+#   SENTRY_DSN - Sentry DSN for general Python error tracking (REQUIRED, no default)
+#   SENTRY_SEND_DEFAULT_PII - Send default PII (default: true)
+#   SENTRY_ENABLE_LOGS - Enable sending logs to Sentry (default: true)
+#   SENTRY_TRACES_SAMPLE_RATE - Sample rate for transaction tracing 0.0-1.0 (default: 1.0)
+#   SENTRY_PROFILE_SESSION_SAMPLE_RATE - Sample rate for profiling sessions 0.0-1.0 (default: 1.0)
+#
+# API-specific Sentry (API_SENTRY_ prefix or SENTRY_ prefix with API_ prefix):
+#   API_SENTRY_DSN or SENTRY_DSN - Sentry DSN for API error tracking (optional, no default)
+#   API_SENTRY_SEND_DEFAULT_PII or SENTRY_SEND_DEFAULT_PII - Send default PII (default: true)
+#   API_SENTRY_ENABLE_LOGS or SENTRY_ENABLE_LOGS - Enable sending logs (default: true)
+#   API_SENTRY_TRACES_SAMPLE_RATE or SENTRY_TRACES_SAMPLE_RATE - Traces sample rate (default: 1.0)
+#   API_SENTRY_PROFILE_SESSION_SAMPLE_RATE or SENTRY_PROFILE_SESSION_SAMPLE_RATE - Profile sample rate (default: 1.0)
+#   API_SENTRY_PROFILE_LIFECYCLE or SENTRY_PROFILE_LIFECYCLE - Profile lifecycle mode (default: "trace")
+#
+# See .env-example for a template. For GitHub Actions, add secrets in repository settings.
+
 [tool.mypy]
 exclude = [
     "packages/firefly-iii-client/build",
     "packages/firefly-iii-client/firefly_iii_client/*",
     "packages/firefly-iii-client/test/*",
 ]
-disallow_untyped_defs = true
-disallow_any_unimported = true
-no_implicit_optional = true
-check_untyped_defs = true
-warn_return_any = true
-warn_unused_ignores = true
-show_error_codes = true
-strict_equality = true
-warn_redundant_casts = true
-warn_unused_configs = true
-warn_no_return = true
-warn_unreachable = true
+# Strict mode - enable all checks
+strict                      = true
+warn_return_any             = true
+warn_unused_ignores         = true
+warn_redundant_casts        = true
+warn_unused_configs         = true
+warn_no_return              = true
+warn_unreachable            = true
+show_error_codes            = true
+strict_equality             = true
+strict_optional             = true
+disallow_any_generics       = true
+disallow_subclassing_any    = true
+disallow_untyped_calls      = true
 disallow_untyped_decorators = true
-disallow_incomplete_defs = true
-disallow_untyped_calls = true
+disallow_untyped_defs       = true
+disallow_incomplete_defs    = true
+check_untyped_defs          = true
+no_implicit_optional        = true
+no_implicit_reexport        = true
 
     [[tool.mypy.overrides]]
     module                 = "firefly_iii_client.*"
+    ignore_missing_imports = true
+
+    [[tool.mypy.overrides]]
+    module                 = "firefly_iii_api_client.*"
     ignore_missing_imports = true
 
     [[tool.mypy.overrides]]
@@ -136,6 +194,19 @@ disallow_untyped_calls = true
     module                 = "googletrans.*"
     ignore_missing_imports = true
 
+    [[tool.mypy.overrides]]
+    module                 = "passlib.*"
+    ignore_missing_imports = true
+
+    [[tool.mypy.overrides]]
+    module                 = "pypdfium2.*"
+    ignore_missing_imports = true
+
+    [[tool.mypy.overrides]]
+    module                 = "pycountry.*"
+    ignore_missing_imports = false
+    follow_imports         = "normal"
+
 [tool.pyright]
 include = ["src"]
 exclude = [
@@ -145,39 +216,73 @@ exclude = [
     "packages/firefly-iii-client/build",
     "packages/firefly-iii-client/firefly_iii_client",
 ]
-typeCheckingMode = "strict"
-useLibraryCodeForTypes = true
-reportMissingImports = true
-reportMissingTypeStubs = false
-reportUnusedImport = true
-reportUnusedClass = true
-reportUnusedFunction = true
-reportUnusedVariable = true
-reportDuplicateImport = true
-reportOptionalSubscript = true
-reportOptionalMemberAccess = true
-reportOptionalCall = true
-reportOptionalIterable = true
-reportOptionalContextManager = true
-reportOptionalOperand = true
+# Strictest mode - enable all checks
+typeCheckingMode                    = "strictest"
+useLibraryCodeForTypes              = true
+reportMissingImports                = "error"
+reportMissingTypeStubs              = "warning"
+reportUnusedImport                  = "error"
+reportUnusedClass                   = "error"
+reportUnusedFunction                = "error"
+reportUnusedVariable                = "error"
+reportDuplicateImport               = "error"
+reportOptionalSubscript             = "error"
+reportOptionalMemberAccess          = "error"
+reportOptionalCall                  = "error"
+reportOptionalIterable              = "error"
+reportOptionalContextManager        = "error"
+reportOptionalOperand               = "error"
+reportGeneralTypeIssues             = "error"
+reportPrivateImportUsage            = "error"
+reportUnknownParameterType          = "error"
+reportUnknownArgumentType           = "error"
+reportUnknownLambdaType             = "error"
+reportUnknownVariableType           = "error"
+reportUnknownMemberType             = "error"
+reportMissingParameterType          = "error"
+reportMissingTypeArgument           = "error"
+reportInvalidTypeVarUse             = "error"
+reportCallInDefaultInitializer      = "error"
+reportUnnecessaryIsInstance         = "error"
+reportUnnecessaryCast               = "error"
+reportAssertAlwaysTrue              = "error"
+reportSelfClsParameterName          = "error"
+reportImplicitStringConcatenation   = "error"
+reportUnusedCallResult              = "error"
+reportUnnecessaryComparison         = "error"
+reportUnnecessaryContains           = "error"
+reportIncompatibleMethodOverride    = "error"
+reportIncompatibleVariableOverride  = "error"
+reportInconsistentConstructor       = "error"
+reportOverlappingOverload           = "error"
+reportUninitializedInstanceVariable = "error"
+reportInvalidStringEscapeSequence   = "error"
+reportUntypedFunctionDecorator      = "error"
+reportUntypedClassDecorator         = "error"
+reportUntypedBaseClass              = "error"
+reportUntypedNamedTuple             = "error"
+reportPrivateUsage                  = "error"
+reportConstantRedefinition          = "error"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = [
     "--strict-markers",
     "--strict-config",
-    "--cov=src/bank_importer_th",
+    "--cov=src/bank_importer",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
     "-n",
     "auto",
 ]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "cli: CLI tests",
     "processor: Processor tests",
+    "api: API tests",
 ]
 
 [tool.ruff]
@@ -186,26 +291,116 @@ line-length    = 88
 exclude        = ["__pycache__", ".git", ".venv", "venv", ".env", "packages"]
 
     [tool.ruff.lint]
-    select = [
-        "E",  # pycodestyle errors
-        "W",  # pycodestyle warnings
-        "F",  # pyflakes
-        "I",  # isort
-        "B",  # flake8-bugbear
-        "C4", # flake8-comprehensions
-        "UP", # pyupgrade
-    ]
+    select = ["ALL"] # Enable all rules
     ignore = [
-        "E501", # line too long, handled by black
-        "B008", # do not perform function calls in argument defaults
-        "C901", # too complex
+        "E501", # line too long, handled by formatter
+        "B008", # do not perform function calls in argument defaults (common pattern)
         "F601", # dictionary key literal repeated (duplicate keys in translation terms)
         "W293", # blank line contains whitespace (minor formatting)
+        "E701", # multiple statements on one line (acceptable in some cases)
+        "E702", # multiple statements on one line (acceptable in some cases)
+        # Naming conventions - allow some flexibility
+        "N802", # Function name should be lowercase (properties can be UPPERCASE for compatibility)
+        "N803", # Argument name should be lowercase
+        "N806", # Variable in function should be lowercase
+        # Type annotation rules - allow Any in some cases
+        "ANN401", # Dynamically typed expressions (Any) - needed for validators and lazy imports
+        # T002 and T003 have been remapped to FIX002 and FIX003 (see below)
+        # Pylint rules - too pedantic
+        "PLR", # Pylint refactor rules (too strict)
+        "PLE", # Pylint error rules (too strict)
+        "PLW", # Pylint warning rules (too strict)
+        # Security rules - handled separately
+        "S104", # Possible binding to all interfaces (0.0.0.0 is acceptable for server binding)
+        "S101", # Use of assert (acceptable in tests)
+        "S603", # subprocess call (acceptable)
+        "S607", # Starting a process with a partial executable path (acceptable)
+        "S608", # Starting a process with a partial executable path (acceptable)
+        "S110", # Try, Except, Pass detected (acceptable in some cases)
+        "S324", # Probable insecure hash (acceptable for non-security uses)
+        # General rules
+        "G002", # Logging statement uses % formatting
+        "G001", # Logging statement uses % formatting
+        "F401", # Imported but unused (handled per-file)
+        # Blind exception - acceptable in some cases
+        "BLE001", # Do not catch blind exception: `Exception`
+        # Import order - handled by isort
+        "PLC0415", # Import should be at top-level (circular imports acceptable)
+        # Type annotations - remapped to FIX rules
+        "FIX002", # Missing type annotation (T002 remapped)
+        "FIX003", # Missing type annotation (T003 remapped)
+        # Missing docstrings - too strict (D rules are pydocstyle docstring rules)
+        # Docstring rule conflicts - ignore incompatible rules
+        "D203", # incorrect-blank-line-before-class (conflicts with D211)
+        "D213", # multi-line-summary-second-line (conflicts with D212)
+        # Note: M102, M105, N001, F821, A001, B904 are not valid Ruff rules
+        # They appear to be from flake8/pylint and are not needed in Ruff config
+        # Ruff uses different rule codes (e.g., F821 -> F821, but Ruff may handle it differently)
+        # General acceptable patterns
+        "TRY301",  # Raise within try (acceptable pattern)
+        "TRY300",  # Try-consider-else (acceptable pattern)
+        "TD002",   # Missing TODO author (not required)
+        "TD003",   # Missing TODO link (not required)
+        "ANN201",  # Missing return type (acceptable for some internal functions)
+        "INP001",  # Implicit namespace package (acceptable)
+        "PERF401", # Manual list comprehension (acceptable pattern)
+        "SIM102",  # Collapsible if (acceptable pattern)
+        "SIM105",  # Suppressible exception (acceptable pattern)
+        "DTZ001",  # Datetime without tzinfo (acceptable in some cases)
+        "DTZ005",  # Datetime.now without tzinfo (acceptable in some cases)
+        "SIM117",  # Multiple with statements (acceptable pattern)
+        "TRY401",  # Verbose log message (acceptable)
+        "B904",    # Raise without from (acceptable in some cases)
+        "ERA001",  # Commented out code (acceptable for documentation)
+        "E402",    # Module import not at top (acceptable for lazy imports)
+        "PTH123",  # Builtin open (acceptable in some cases)
+        "RUF034",  # Useless if-else (acceptable pattern)
+        "S102",    # Exec builtin (acceptable in some cases)
+        "SIM108",  # If-else block instead of if-exp (acceptable pattern)
+        "SIM115",  # Open file with context handler (acceptable in some cases)
     ]
 
         [tool.ruff.lint.per-file-ignores]
-        "__init__.py"                                         = ["F401"]
+        "__init__.py" = ["F401"]
         "packages/firefly-iii-client/firefly_iii_client/**/*" = ["E501", "F401", "F403", "F405"]
+        "src/bank_importer/api/security.py" = [
+            "SLF001",
+        ] # Intentional access to _BcryptBackend for patching
+        "src/bank_importer/cli/commands/configure.py" = [
+            "S105",
+        ] # password_prompt is variable name, not actual password
+        "src/bank_importer/banks/**/*" = [
+            "ARG002",
+            "C901",
+        ] # Unused args required by interface; complex parsing logic acceptable
+        "src/bank_importer/interfaces/parser.py" = ["ARG002"] # Unused args required by interface
+        "src/bank_importer/targets/**/*" = [
+            "ARG002",
+            "C901",
+        ] # Unused args required by interface; complex target logic acceptable
+        "src/bank_importer/logging_config.py" = ["SLF001"] # Intentional access to private method
+        "src/bank_importer/**/_*.py" = ["D"] # Ignore docstring rules for private modules
+        "src/**/_*.py" = ["D"] # Ignore docstring rules for private functions/files
+        "src/**/*" = ["D401"] # Allow non-imperative mood (descriptive docstrings are fine)
+        "src/bank_importer/cli/commands/**/*" = ["C901"] # Complex CLI commands acceptable
+        "src/bank_importer/translation_terms/**/*" = ["C901"] # Complex pattern matching acceptable
+        "src/bank_importer/telemetry.py" = ["C901"] # Decorator factory is inherently complex
+        "tests/**/*" = [
+            "SLF001",
+            "ANN001",
+            "S105",
+            "ARG001",
+            "ARG002",
+            "PT011",
+            "B017",
+            "FBT001",
+            "FBT003",
+            "RUF043",
+            "S108",
+            "D",      # All docstring rules (tests don't need strict docstrings)
+            "PIE807", # Lambda needed for FastAPI dependency override
+            "TC001",  # ConfigManager used at runtime in test
+        ]
 
 [tool.black]
 target-version = ['py311']
@@ -218,10 +413,9 @@ exclude = '''
 
 [tool.isort]
 profile           = "black"
-multi_line_output = 3
-target_version    = "py311"
 line_length       = 88
-skip_glob         = ["packages/firefly-iii-client/test/*"]
+skip_gitignore    = true
+known_first_party = ["bank_importer"]
 
 [tool.coverage.run]
 source   = ["src"]
@@ -240,67 +434,27 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
-    "print\\(",
-    "console\\.log\\(",
-    "debug\\(",
-    "logger\\.debug\\(",
-    "logging\\.debug\\(",
 ]
 
 [tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
-build_command = "uv build"
-dist_path = "dist"
-upload_to_vcs_release = true
-upload_to_pypi = false
-upload_to_release = true
-hvcs = "gitea"
-remote = { name = "origin" }
-major_on_zero = false
-prerelease_tag = "beta"
-prerelease = true
-prerelease_token = "beta"
-build_commit_message = "chore: build {version} [skip ci]"
-commit_author = "semantic-release <semantic-release@jochempiya.org>"
-commit_subject = "chore: release {version}"
-commit_message = "chore: release {version}\n\nAutomatically generated by python-semantic-release"
-tag_commit = true
-tag_message = "chore: release {version}"
-tag_subject = "Release {version}"
-changelog_file = "CHANGELOG.md"
-changelog_scope = "src/bank_importer_th"
-changelog_sections = [
-    "feat",
-    "fix",
-    "perf",
-    "refactor",
-    "docs",
-    "style",
-    "test",
-    "build",
-    "ci",
-    "chore",
-]
-changelog_ignore_merge_commits = true
-changelog_ignore_commits_with = ["skip ci", "ci skip", "no ci", "skip changelog", "changelog skip"]
+version_variable       = ["src/bank_importer/version.py:__version__"]
+version_toml           = ["pyproject.toml:project.version"]
+build_command          = "echo 'Package already built'"
+dist_path              = "dist"
+upload_to_vcs_release  = true
+upload_to_pypi         = false
+commit_author          = "semantic-release <semantic-release>"
+commit_message         = "chore: release {version}\n\nAutomatically generated by python-semantic-release"
+tag_commit             = true
+tag_message            = "chore: release {version}"
+tag_subject            = "Release {version}"
+changelog_file         = "CHANGELOG.md"
+changelog_scope        = "src/bank_importer"
+changelog_sections     = ["feat", "fix", "perf", "refactor"]
 changelog_ignore_types = ["docs", "style", "test", "build", "ci", "chore"]
 
-    # Tag configuration for different branches
-    [tool.semantic_release.branches]
-    develop = { name = "develop", prerelease = true, prerelease_token = "alpha" }
-    beta    = { name = "beta", prerelease = true, prerelease_token = "beta" }
-    stable  = { name = "stable", prerelease = false }
-
-    # Gitea-specific settings
-    [tool.semantic_release.gitea]
-    domain = "git.jochempiya.org"
-
-[tool.commitizen]
-name                     = "cz_conventional_commits"
-version                  = "1.0.0"
-tag_format               = "v$version"
-version_scheme           = "pep440"
-version_provider         = "semantic-release"
-files                    = ["src"]
-update_changelog_on_bump = true
-major_version_zero       = true
+[tool.poe.tasks]
+test                 = "pytest tests/ -v"
+test-unit            = "pytest tests/ -v -m 'not integration'"
+test-integration     = "pytest tests/integration/ -v -m integration"
+test-integration-cov = "pytest tests/integration/ -v -m integration --cov=src/bank_importer --cov-report=term-missing"

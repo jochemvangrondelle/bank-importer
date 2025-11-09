@@ -106,6 +106,44 @@ docker-compose*.yml
 scripts/
 !scripts/docker-entrypoint.sh
 
+# Development and build artifacts
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.egg-info/
+build/
+dist/
+*.whl
+*.tar.gz
+
+# Documentation (keep only README for package metadata)
+docs/
+*.md
+!README.md
+
+# CI/CD (not needed in image)
+.github/
+.gitea/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Development tools
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 # Tests
 tests/
 

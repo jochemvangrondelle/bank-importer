@@ -14,8 +14,8 @@ Bank Importer Thailand is a Python application that parses Thai bank export PDFs
 2. **Clone your fork** locally
 3. **Set up the development environment**:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/bank-importer-th.git
-   cd bank-importer-th
+   git clone https://github.com/YOUR_USERNAME/bank-importer.git
+   cd bank-importer
    uv sync --extra dev
    ```
 
@@ -52,7 +52,7 @@ Bank Importer Thailand is a Python application that parses Thai bank export PDFs
 The project follows a modular architecture:
 
 ```
-src/bank_importer_th/
+src/bank_importer/
 ├── banks/           # Bank-specific parsers
 ├── targets/         # Export format handlers
 ├── models/          # Data structures
@@ -72,7 +72,7 @@ src/bank_importer_th/
 
 To add support for a new Thai bank:
 
-1. **Create a new parser** in `src/bank_importer_th/banks/`
+1. **Create a new parser** in `src/bank_importer/banks/`
 2. **Implement the Parser interface**:
 
    ```python
@@ -101,7 +101,7 @@ To add support for a new Thai bank:
 
 To add a new export format:
 
-1. **Create a new target** in `src/bank_importer_th/targets/`
+1. **Create a new target** in `src/bank_importer/targets/`
 2. **Implement the Target interface**:
 
    ```python
@@ -121,7 +121,7 @@ To add a new export format:
 
 ### **Adding Thai Financial Terms**
 
-1. **Edit** `src/bank_importer_th/translation_terms/thai_terms.py`
+1. **Edit** `src/bank_importer/translation_terms/thai_terms.py`
 2. **Add new terms** to the `THAI_FINANCIAL_TERMS` dictionary:
    ```python
    THAI_FINANCIAL_TERMS = {
@@ -132,7 +132,7 @@ To add a new export format:
 
 ### **Improving Translation Logic**
 
-1. **Enhance** `src/bank_importer_th/translation_service.py`
+1. **Enhance** `src/bank_importer/translation_service.py`
 2. **Add new translation services** if needed
 3. **Improve caching** and performance
 4. **Add support for other languages**
@@ -149,7 +149,7 @@ uv run pytest
 uv run pytest tests/banks/test_krungsri_pdf.py
 
 # Run with coverage
-uv run pytest --cov=src/bank_importer_th
+uv run pytest --cov=src/bank_importer
 
 # Run type checking
 uv run mypy src/

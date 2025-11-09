@@ -296,7 +296,7 @@ class GenericFixedWidthParser(Parser):
                 country_code=account_config.get("country_code", "TH"),
                 channel=None,
                 reference=None,
-                file_path=str(file_path),
+                source_file=str(file_path),
                 raw_text=line,
                 raw_json=json.dumps({"line": line, "field_positions": field_positions}),
                 parser_name="generic_fixed_width",

@@ -31,7 +31,7 @@ async def list_transactions(
         str | None,
         Query(description="Filter by account number"),
     ] = None,
-    account_name: Annotated[
+    _account_name: Annotated[
         str | None,
         Query(description="Filter by account name"),
     ] = None,
@@ -53,8 +53,9 @@ async def list_transactions(
         Query(ge=1, le=1000, description="Maximum number of results"),
     ] = 100,
     offset: Annotated[int, Query(ge=0, description="Number of results to skip")] = 0,
-    db: DatabaseManager = Depends(get_db_manager),
-    _: dict = Depends(require_auth),
+    *,
+    db: Annotated[DatabaseManager, Depends(get_db_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, Any]:
     """List transactions with optional filtering."""
     transactions, total = db.get_transactions_filtered(
@@ -80,7 +81,7 @@ async def list_transactions(
 async def get_transaction(
     transaction_id: int,
     db: Annotated[DatabaseManager, Depends(get_db_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> TransactionResponse:
     """Get transaction by ID."""
     transaction = db.get_transaction_by_id(transaction_id)
@@ -102,7 +103,7 @@ async def update_transaction(
     transaction_id: int,
     update: TransactionUpdate,
     db: Annotated[DatabaseManager, Depends(get_db_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> TransactionResponse:
     """Update transaction."""
     transaction = db.update_transaction(

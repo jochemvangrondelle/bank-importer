@@ -109,6 +109,38 @@ class APISettings(BaseSettings):
         description="ReDoc URL",
     )
 
+    # Sentry settings
+    sentry_dsn: str | None = Field(
+        default=None,
+        description="Sentry DSN for API error tracking (set via API_SENTRY_DSN or SENTRY_DSN env var)",
+        alias="SENTRY_DSN",
+    )
+    sentry_send_default_pii: bool = Field(
+        default=True,
+        description="Send default PII (request headers and IP) to Sentry",
+        alias="SENTRY_SEND_DEFAULT_PII",
+    )
+    sentry_enable_logs: bool = Field(
+        default=True,
+        description="Enable sending logs to Sentry",
+        alias="SENTRY_ENABLE_LOGS",
+    )
+    sentry_traces_sample_rate: float = Field(
+        default=1.0,
+        description="Sample rate for transaction tracing (0.0 to 1.0)",
+        alias="SENTRY_TRACES_SAMPLE_RATE",
+    )
+    sentry_profile_session_sample_rate: float = Field(
+        default=1.0,
+        description="Sample rate for profiling sessions (0.0 to 1.0)",
+        alias="SENTRY_PROFILE_SESSION_SAMPLE_RATE",
+    )
+    sentry_profile_lifecycle: str | None = Field(
+        default="trace",
+        description="Profile lifecycle mode ('trace' to auto-profile active transactions)",
+        alias="SENTRY_PROFILE_LIFECYCLE",
+    )
+
     # Error messages
     error_not_authenticated: str = Field(
         default="Not authenticated. Please login first at /api/v1/auth/login",
@@ -174,9 +206,9 @@ class APISettings(BaseSettings):
         if config:
             api_config = config.config.get("api", {})
             if isinstance(api_config, dict):
-                jwt_secret: Any = api_config.get(self.password_config_key)
+                jwt_secret = api_config.get(self.password_config_key)
                 if jwt_secret and isinstance(jwt_secret, str):
-                    return jwt_secret
+                    return str(jwt_secret)
 
         # Fallback to default (not secure for production!)
         return self.jwt_secret_key
@@ -184,13 +216,14 @@ class APISettings(BaseSettings):
     def get_cors_origins(self) -> list[str]:
         """Get CORS allowed origins."""
         # pydantic-settings may return str or list[str] depending on how it was set
-        if isinstance(self.cors_allow_origins, list):
-            return self.cors_allow_origins
-        # Type checker doesn't know cors_allow_origins can be str, but it can be
-        cors_value: str | list[str] = self.cors_allow_origins  # type: ignore[assignment]
-        if isinstance(cors_value, str):
-            return self.parse_cors_origins(cors_value)
-        return ["*"]
+        cors_value = self.cors_allow_origins
+        if isinstance(cors_value, list):
+            return cors_value
+        # Type checker knows cors_allow_origins can be str
+        assert isinstance(cors_value, str), (
+            "cors_allow_origins must be str or list[str]"
+        )
+        return self.parse_cors_origins(cors_value)
 
     def get_api_host(self) -> str:
         """Get API host."""

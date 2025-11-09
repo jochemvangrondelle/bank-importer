@@ -108,7 +108,7 @@ class YamlTarget(Target):
                 filename = f"{original_filename}_{timestamp}.yaml"
             else:
                 # Clean up source file name for filename
-                source_file = config.get("source_file", "unknown")
+                source_file = config_dict.get("source_file", "unknown")
                 clean_source = self._clean_filename(source_file)
                 filename = f"{clean_source}_{timestamp}.yaml"
         else:
@@ -146,7 +146,7 @@ class YamlTarget(Target):
             elif export_type == "bank_consolidated":
                 summary_filename = f"summary_{bank_type}-all_{timestamp}.yaml"
             elif export_type == "source_file":
-                source_file = config.get("source_file", "unknown")
+                source_file = config_dict.get("source_file", "unknown")
                 clean_source = self._clean_filename(source_file)
                 summary_filename = f"summary_{clean_source}_{timestamp}.yaml"
             else:

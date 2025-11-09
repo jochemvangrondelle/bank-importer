@@ -15,6 +15,7 @@
 import json
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from bank_importer.logging_config import (
     get_logger,
@@ -25,6 +26,9 @@ from bank_importer.logging_config import (
 )
 from bank_importer.models.enums import Language, get_language_en, get_language_th
 from bank_importer.models.function_models import TranslationConfig
+
+if TYPE_CHECKING:
+    from googletrans import Translator
 
 # Check for available translation libraries
 try:
@@ -42,8 +46,6 @@ except ImportError:
     DEEP_TRANSLATOR_AVAILABLE = False
 
 try:
-    from googletrans import Translator
-
     GOOGLETRANS_AVAILABLE = True
 except ImportError:
     GOOGLETRANS_AVAILABLE = False
@@ -262,13 +264,14 @@ class TranslationService:
 
     def _translate_with_deep_translator(self, text: str) -> str | None:
         """Translate text using deep-translator library."""
-        if not self.translator or not DEEP_TRANSLATOR_AVAILABLE:  # type: ignore[unreachable]
+        if not self.translator or not DEEP_TRANSLATOR_AVAILABLE:
             return None
 
-        try:  # type: ignore[unreachable]
+        try:
             # deep-translator uses a different API
             if hasattr(self.translator, "translate"):
-                return self.translator.translate(text)
+                result = self.translator.translate(text)
+                return str(result) if result else None
             return None
         except Exception as e:
             log_error(f"Deep-translator error: {e}")
@@ -279,11 +282,11 @@ class TranslationService:
         if (
             not self.translator
             or self._googletrans_disabled
-            or not GOOGLETRANS_AVAILABLE  # type: ignore[unreachable]
+            or not GOOGLETRANS_AVAILABLE
         ):
             return None
 
-        try:  # type: ignore[unreachable]
+        try:
             result = self.translator.translate(
                 text,
                 src=self.source_language,
@@ -291,7 +294,7 @@ class TranslationService:
             )
             # Handle both sync and async results
             if hasattr(result, "text"):
-                return result.text
+                return str(result.text)
             if hasattr(result, "__await__"):
                 # It's a coroutine, we can't handle it synchronously
                 # Disable googletrans for this session to avoid repeated warnings
@@ -309,6 +312,49 @@ class TranslationService:
                 log_error(f"Google Translate error: {e}")
                 self._googletrans_disabled = True
             return None
+
+    def _try_api_translation(
+        self,
+        text: str,
+        original_text: str,
+    ) -> str | None:
+        """Try API translation methods and return translated text or None."""
+        # Try deep-translator first (most reliable)
+        deep_translation = self._translate_with_deep_translator(text)
+        if deep_translation:
+            if deep_translation != original_text:
+                log_info(
+                    f"Translated '{original_text[:50]}...' -> '{deep_translation[:50]}...' ({self.source_language} -> {self.target_language})",
+                )
+            return deep_translation
+
+        # Try API translation (if API key is available)
+        api_translation = self._translate_with_api(text)
+        if api_translation:
+            if api_translation != original_text:
+                log_info(
+                    f"Translated '{original_text[:50]}...' -> '{api_translation[:50]}...' ({self.source_language} -> {self.target_language})",
+                )
+            return api_translation
+
+        # Try googletrans fallback if API key is provided
+        if self.api_key:
+            googletrans_translation = self._translate_with_googletrans(text)
+            if googletrans_translation:
+                if googletrans_translation != original_text:
+                    log_info(
+                        f"Translated '{original_text[:50]}...' -> '{googletrans_translation[:50]}...' ({self.source_language} -> {self.target_language})",
+                    )
+                return googletrans_translation
+            log_warning(
+                f"Translation failed for '{original_text[:50]}...' (all methods failed)",
+            )
+        else:
+            log_info(
+                f"No translation attempted for '{original_text[:50]}...' (no API key)",
+            )
+
+        return None
 
     def translate_description(
         self,
@@ -347,45 +393,9 @@ class TranslationService:
 
         # Step 2: Use API translation if enabled and available
         if use_api_translation and translated_text == original_text:
-            # Try deep-translator first (most reliable)
-            deep_translation = self._translate_with_deep_translator(translated_text)
-            if deep_translation:
-                translated_text = deep_translation
-                # Only log successful translations, not every attempt
-                if translated_text != original_text:
-                    log_info(
-                        f"Translated '{original_text[:50]}...' -> '{deep_translation[:50]}...' ({self.source_language} -> {self.target_language})",
-                    )
-            else:
-                # Try API translation (if API key is available)
-                api_translation = self._translate_with_api(translated_text)
-                if api_translation:
-                    translated_text = api_translation
-                    if translated_text != original_text:
-                        log_info(
-                            f"Translated '{original_text[:50]}...' -> '{api_translation[:50]}...' ({self.source_language} -> {self.target_language})",
-                        )
-                elif self.api_key:
-                    # API key is provided but translation failed, try googletrans fallback
-                    googletrans_translation = self._translate_with_googletrans(
-                        translated_text,
-                    )
-                    if googletrans_translation:
-                        translated_text = googletrans_translation
-                        if translated_text != original_text:
-                            log_info(
-                                f"Translated '{original_text[:50]}...' -> '{googletrans_translation[:50]}...' ({self.source_language} -> {self.target_language})",
-                            )
-                    else:
-                        log_warning(
-                            f"Translation failed for '{original_text[:50]}...' (all methods failed)",
-                        )
-                # If no API key is provided, skip API translation entirely
-                # Term mapping has already been applied above
-                else:
-                    log_info(
-                        f"No translation attempted for '{original_text[:50]}...' (no API key)",
-                    )
+            api_result = self._try_api_translation(translated_text, original_text)
+            if api_result:
+                translated_text = api_result
         elif translated_text != original_text:
             # Term mapping was applied
             log_info(

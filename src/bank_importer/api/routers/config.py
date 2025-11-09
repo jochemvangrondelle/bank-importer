@@ -39,7 +39,7 @@ router = APIRouter()
 @router.get("", tags=["Configuration"])
 async def get_config(
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> ConfigResponse:
     """Get full configuration."""
     raw_config = config.config
@@ -60,6 +60,7 @@ async def get_config(
             "translation_cache_file",
             "translation_cache.json",
         ),
+        google_translate_api_key=translation_config.get("google_translate_api_key"),
         term_mappings=translation_config.get("term_mappings"),
     )
 
@@ -82,9 +83,9 @@ async def get_config(
 
 @router.put("", tags=["Configuration"])
 async def update_config(
-    config_update: ConfigUpdate,
-    config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _config_update: ConfigUpdate,
+    _config: Annotated[ConfigManager, Depends(get_config_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> ConfigResponse:
     """Update full configuration."""
     # TODO: Implement full config update
@@ -97,7 +98,7 @@ async def update_config(
 @router.get("/settings", tags=["Configuration"])
 async def get_settings(
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> SettingsResponse:
     """Get application settings."""
     raw_config = config.config
@@ -115,6 +116,7 @@ async def get_settings(
             "translation_cache_file",
             "translation_cache.json",
         ),
+        google_translate_api_key=translation_config.get("google_translate_api_key"),
         term_mappings=translation_config.get("term_mappings"),
     )
 
@@ -128,9 +130,9 @@ async def get_settings(
 
 @router.patch("/settings", tags=["Configuration"])
 async def update_settings(
-    settings_update: SettingsUpdate,
-    config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _settings_update: SettingsUpdate,
+    _config: Annotated[ConfigManager, Depends(get_config_manager)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> SettingsResponse:
     """Update application settings."""
     # TODO: Implement settings update
@@ -143,7 +145,7 @@ async def update_settings(
 @router.get("/accounts", tags=["Configuration"])
 async def list_accounts(
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, Any]:
     """List all accounts."""
     accounts = [
@@ -160,7 +162,7 @@ async def list_accounts(
 async def create_account(
     account: AccountConfig,
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> AccountConfigResponse:
     """Create new account."""
     # Check if account already exists
@@ -187,7 +189,7 @@ async def create_account(
 async def get_account(
     account_name: str,
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> AccountConfigResponse:
     """Get account by name."""
     account = config.get_account_config(account_name)
@@ -207,7 +209,7 @@ async def update_account(
     account_name: str,
     account: AccountConfig,
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> AccountConfigResponse:
     """Update account."""
     existing = config.get_account_config(account_name)
@@ -237,7 +239,7 @@ async def update_account(
 async def delete_account(
     account_name: str,
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> None:
     """Delete account."""
     existing = config.get_account_config(account_name)
@@ -257,7 +259,7 @@ async def delete_account(
 @router.get("/targets", tags=["Configuration"])
 async def list_targets(
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> dict[str, Any]:
     """List all targets."""
     targets = [
@@ -274,7 +276,7 @@ async def list_targets(
 async def create_target(
     target: TargetConfig,
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> TargetConfigResponse:
     """Create new target."""
     # Check if target already exists
@@ -301,7 +303,7 @@ async def create_target(
 async def get_target(
     target_name: str,
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> TargetConfigResponse:
     """Get target by name."""
     targets = config.config.get("targets", [])
@@ -323,7 +325,7 @@ async def update_target(
     target_name: str,
     target: TargetConfig,
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> TargetConfigResponse:
     """Update target."""
     targets = config.config.get("targets", [])
@@ -354,7 +356,7 @@ async def update_target(
 async def delete_target(
     target_name: str,
     config: Annotated[ConfigManager, Depends(get_config_manager)],
-    _: Annotated[dict, Depends(require_auth)],
+    _: Annotated[dict[str, Any], Depends(require_auth)],
 ) -> None:
     """Delete target."""
     targets = config.config.get("targets", [])

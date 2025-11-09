@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Bank Importer Thailand, please send an email to maintainers or admin@vangrondelle.net.
+If you discover a security vulnerability within Bank Importer Thailand, please report it through [GitHub Security Advisories](https://github.com/jochemvangrondelle/bank-importer/security/advisories/new) or send an email to jochem@vangrondelle.net.
 
 ### What to Include
 
@@ -50,8 +50,8 @@ When reporting a vulnerability, please include:
 
 Security vulnerabilities will be disclosed through:
 
-1. **Private disclosure**: Initial private communication with the maintainer
-2. **Public disclosure**: After a fix is available, through GitHub releases
+1. **Private disclosure**: Initial private communication via GitHub Security Advisories
+2. **Public disclosure**: After a fix is available, through GitHub releases and security advisories
 
 ## Responsible Disclosure
 

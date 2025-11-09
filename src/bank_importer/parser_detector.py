@@ -20,7 +20,7 @@ from typing import Any
 try:
     import pypdfium2 as pdfium
 except ImportError:
-    pdfium = None  # type: ignore[assignment, misc]
+    pdfium = None
 
 from bank_importer.banks import (
     AmexThCsvParser,

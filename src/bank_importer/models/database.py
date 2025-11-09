@@ -28,6 +28,7 @@ from bank_importer.models.export_session import ExportSession
 from bank_importer.models.function_models import ExportSessionUpdate
 from bank_importer.models.import_session import ImportSession
 from bank_importer.models.transaction import Transaction
+from bank_importer.telemetry import trace_span
 
 
 class DatabaseManager:
@@ -38,6 +39,55 @@ class DatabaseManager:
     the same database file concurrently.
     """
 
+    def _extract_db_path_from_url(self, database_url: str) -> str:
+        """Extract database path from URL."""
+        if database_url.startswith("duckdb:///"):
+            return database_url.replace("duckdb:///", "")
+        if database_url.startswith("duckdb:"):
+            return database_url.replace("duckdb:", "")
+        if database_url == "duckdb:///:memory:":
+            return ":memory:"
+        if database_url.startswith("sqlite:///"):
+            return database_url.replace("sqlite:///", "")
+        if database_url.startswith("sqlite:"):
+            return database_url.replace("sqlite:", "")
+        if database_url == "sqlite:///:memory:":
+            return ":memory:"
+        return database_url
+
+    def _ensure_db_directory_exists(self, db_path: str) -> None:
+        """Ensure parent directory exists for file-based databases."""
+        if db_path == ":memory:":
+            return
+
+        db_file = Path(db_path)
+        parent_dir = db_file.parent
+        if parent_dir and not parent_dir.exists():
+            try:
+                parent_dir.mkdir(parents=True, exist_ok=True)
+            except (OSError, PermissionError) as e:
+                msg = (
+                    f"Cannot create database directory '{parent_dir}': {e}. "
+                    f"Please ensure the directory exists and is writable, or check file permissions."
+                )
+                raise RuntimeError(msg) from e
+
+    def _connect_to_database(self, db_path: str) -> None:
+        """Create database connection with error handling."""
+        try:
+            self.conn = duckdb.connect(db_path)
+        except Exception as e:
+            if "Permission denied" in str(e) or "PermissionError" in str(
+                type(e).__name__,
+            ):
+                msg = (
+                    f"Cannot open database file '{db_path}': Permission denied. "
+                    f"Please ensure the file/directory is writable. "
+                    f"In Docker, ensure the database path is within a mounted volume (e.g., /app/data/)."
+                )
+                raise RuntimeError(msg) from e
+            raise
+
     def __init__(self, database_url: str) -> None:
         """Initialize database manager.
 
@@ -47,59 +97,10 @@ class DatabaseManager:
         """
         self.database_url = database_url
         self._closed = False
-        # Extract path from URL (duckdb:///path/to/db or duckdb:path/to/db)
-        # Also handle sqlite:// URLs for backward compatibility
-        if database_url.startswith("duckdb:///"):
-            db_path = database_url.replace("duckdb:///", "")
-        elif database_url.startswith("duckdb:"):
-            db_path = database_url.replace("duckdb:", "")
-        elif database_url == "duckdb:///:memory:":
-            db_path = ":memory:"
-        elif database_url.startswith("sqlite:///"):
-            # Convert SQLite URL to DuckDB path
-            db_path = database_url.replace("sqlite:///", "")
-        elif database_url.startswith("sqlite:"):
-            db_path = database_url.replace("sqlite:", "")
-        elif database_url == "sqlite:///:memory:":
-            db_path = ":memory:"
-        else:
-            db_path = database_url
 
-        # Ensure parent directory exists for file-based databases (not in-memory)
-        if db_path != ":memory:":
-            db_file = Path(db_path)
-            # Create parent directory if it doesn't exist
-            parent_dir = db_file.parent
-            if parent_dir and not parent_dir.exists():
-                try:
-                    parent_dir.mkdir(parents=True, exist_ok=True)
-                except (OSError, PermissionError) as e:
-                    msg = (
-                        f"Cannot create database directory '{parent_dir}': {e}. "
-                        f"Please ensure the directory exists and is writable, or check file permissions."
-                    )
-                    raise RuntimeError(
-                        msg,
-                    ) from e
-
-        # Create connection - DuckDB supports multiple concurrent connections
-        # Each connection is thread-safe when used by a single thread
-        try:
-            self.conn = duckdb.connect(db_path)
-        except Exception as e:
-            # Provide helpful error message for permission issues
-            if "Permission denied" in str(e) or "PermissionError" in str(
-                type(e).__name__,
-            ):
-                msg = (
-                    f"Cannot open database file '{db_path}': Permission denied. "
-                    f"Please ensure the file/directory is writable. "
-                    f"In Docker, ensure the database path is within a mounted volume (e.g., /app/data/)."
-                )
-                raise RuntimeError(
-                    msg,
-                ) from e
-            raise
+        db_path = self._extract_db_path_from_url(database_url)
+        self._ensure_db_directory_exists(db_path)
+        self._connect_to_database(db_path)
         self._create_tables()
 
     def close(self) -> None:
@@ -478,69 +479,20 @@ class DatabaseManager:
             tuple: (transaction_id, is_new) where is_new indicates if this was a new transaction
 
         """
-        # Generate unique ID for the transaction if not already set
-        if not transaction.unique_id:
-            transaction.unique_id = self._generate_unique_id(transaction)
+        with trace_span(
+            "db_add_transaction",
+            {
+                "account_number": transaction.account_number,
+                "source_file": transaction.source_file,
+            },
+        ):
+            # Generate unique ID for the transaction if not already set
+            if not transaction.unique_id:
+                transaction.unique_id = self._generate_unique_id(transaction)
 
-        with self._transaction():
-            try:
-                # Check if transaction already exists
-                existing = self.conn.execute(
-                    """
-                    SELECT id FROM transactions
-                    WHERE date = ? AND amount = ? AND description = ?
-                      AND account_number = ? AND source_file = ? AND unique_id = ?
-                """,
-                    [
-                        transaction.date,
-                        str(transaction.amount),
-                        transaction.description,
-                        transaction.account_number,
-                        transaction.source_file,
-                        transaction.unique_id,
-                    ],
-                ).fetchone()
-
-                if existing:
-                    return existing[0], False
-
-                # Insert new transaction
-                data = self._transaction_from_model(transaction)
-                columns = [k for k in data if data[k] is not None]
-                values = [data[k] for k in columns]
-                placeholders = ", ".join(["?" for _ in columns])
-                col_names = ", ".join(columns)
-
-                # Insert and get ID using RETURNING
-                # Exclude id from insert if it's None, generate new ID
-                if "id" in columns and data["id"] is None:
-                    columns.remove("id")
-                    transaction_id = self._get_next_id("transactions")
-                    columns.insert(0, "id")
-                    values.insert(0, transaction_id)
-                    placeholders = ", ".join(["?" for _ in columns])
-                    col_names = ", ".join(columns)
-                else:
-                    transaction_id: int | None = data.get("id")
-                    if transaction_id is None:
-                        transaction_id = self._get_next_id("transactions")
-                        if "id" not in columns:
-                            columns.insert(0, "id")
-                            values.insert(0, transaction_id)
-                            placeholders = ", ".join(["?" for _ in columns])
-                            col_names = ", ".join(columns)
-
-                result = self.conn.execute(
-                    f"INSERT INTO transactions ({col_names}) VALUES ({placeholders}) RETURNING id",
-                    values,
-                ).fetchone()
-                transaction_id = result[0] if result else transaction_id
-                return transaction_id, True
-
-            except Exception as e:
-                # Check if this is a duplicate transaction error
-                if "UNIQUE constraint" in str(e) or "duplicate" in str(e).lower():
-                    # Find the existing transaction
+            with self._transaction():
+                try:
+                    # Check if transaction already exists
                     existing = self.conn.execute(
                         """
                         SELECT id FROM transactions
@@ -556,8 +508,66 @@ class DatabaseManager:
                             transaction.unique_id,
                         ],
                     ).fetchone()
-                    return (existing[0] if existing else 0), False
-                raise
+
+                    if existing:
+                        return existing[0], False
+
+                    # Insert new transaction
+                    data = self._transaction_from_model(transaction)
+                    columns = [k for k in data if data[k] is not None]
+                    values = [data[k] for k in columns]
+                    placeholders = ", ".join(["?" for _ in columns])
+                    col_names = ", ".join(columns)
+
+                    # Insert and get ID using RETURNING
+                    # Exclude id from insert if it's None, generate new ID
+                    transaction_id: int
+                    existing_id = data.get("id")
+                    if "id" in columns and existing_id is None:
+                        columns.remove("id")
+                        transaction_id = self._get_next_id("transactions")
+                        columns.insert(0, "id")
+                        values.insert(0, transaction_id)
+                        placeholders = ", ".join(["?" for _ in columns])
+                        col_names = ", ".join(columns)
+                    elif existing_id is not None:
+                        transaction_id = existing_id
+                    else:
+                        transaction_id = self._get_next_id("transactions")
+                        if "id" not in columns:
+                            columns.insert(0, "id")
+                            values.insert(0, transaction_id)
+                            placeholders = ", ".join(["?" for _ in columns])
+                            col_names = ", ".join(columns)
+
+                    result = self.conn.execute(
+                        f"INSERT INTO transactions ({col_names}) VALUES ({placeholders}) RETURNING id",
+                        values,
+                    ).fetchone()
+                    transaction_id = result[0] if result else transaction_id
+                    return transaction_id, True
+
+                except Exception as e:
+                    # Check if this is a duplicate transaction error
+                    if "UNIQUE constraint" in str(e) or "duplicate" in str(e).lower():
+                        # Find the existing transaction
+                        existing = self.conn.execute(
+                            """
+                            SELECT id FROM transactions
+                            WHERE date = ? AND amount = ? AND description = ?
+                              AND account_number = ? AND source_file = ? AND unique_id = ?
+                        """,
+                            [
+                                transaction.date,
+                                str(transaction.amount),
+                                transaction.description,
+                                transaction.account_number,
+                                transaction.source_file,
+                                transaction.unique_id,
+                            ],
+                        ).fetchone()
+                        return (existing[0] if existing else 0), False
+                    raise
 
     def _generate_unique_id(self, transaction: Transaction) -> str:
         """Generate a unique ID for a transaction to distinguish identical transactions in the same file."""
@@ -743,8 +753,8 @@ class DatabaseManager:
     def update_import_session(self, session_id: int, **kwargs: object) -> None:
         """Update import session fields."""
         with self._transaction():
-            updates = []
-            values = []
+            updates: list[str] = []
+            values: list[object] = []
             for key, value in kwargs.items():
                 updates.append(f"{key} = ?")
                 values.append(value)
@@ -913,46 +923,56 @@ class DatabaseManager:
         )
         self._update_export_session_impl(update)
 
+    def _build_export_session_updates(
+        self,
+        update: ExportSessionUpdate,
+    ) -> tuple[list[str], list[object]]:
+        """Build SQL update clauses and values from ExportSessionUpdate."""
+        updates: list[str] = []
+        values: list[object] = []
+
+        if update.status is not None:
+            updates.append("status = ?")
+            values.append(update.status)
+        if update.total_transactions is not None:
+            updates.append("total_transactions = ?")
+            values.append(update.total_transactions)
+        if update.exported_transactions is not None:
+            updates.append("exported_transactions = ?")
+            values.append(update.exported_transactions)
+        if update.skipped_transactions is not None:
+            updates.append("skipped_transactions = ?")
+            values.append(update.skipped_transactions)
+        if update.error_transactions is not None:
+            updates.append("error_transactions = ?")
+            values.append(update.error_transactions)
+        if update.output_file is not None:
+            updates.append("output_file = ?")
+            values.append(update.output_file)
+        if update.session_metadata is not None:
+            updates.append("session_metadata = ?")
+            values.append(update.session_metadata)
+        if update.error_message is not None:
+            updates.append("error_message = ?")
+            values.append(update.error_message)
+        if update.completed_at is not None:
+            updates.append("completed_at = ?")
+            values.append(update.completed_at)
+
+        return updates, values
+
     def _update_export_session_impl(self, update: ExportSessionUpdate) -> None:
         """Internal implementation of export session update."""
+        updates, values = self._build_export_session_updates(update)
+        if not updates:
+            return
+
         with self._transaction():
-            updates = []
-            values = []
-
-            if update.status is not None:
-                updates.append("status = ?")
-                values.append(update.status)
-            if update.total_transactions is not None:
-                updates.append("total_transactions = ?")
-                values.append(update.total_transactions)
-            if update.exported_transactions is not None:
-                updates.append("exported_transactions = ?")
-                values.append(update.exported_transactions)
-            if update.skipped_transactions is not None:
-                updates.append("skipped_transactions = ?")
-                values.append(update.skipped_transactions)
-            if update.error_transactions is not None:
-                updates.append("error_transactions = ?")
-                values.append(update.error_transactions)
-            if update.output_file is not None:
-                updates.append("output_file = ?")
-                values.append(update.output_file)
-            if update.session_metadata is not None:
-                updates.append("session_metadata = ?")
-                values.append(update.session_metadata)
-            if update.error_message is not None:
-                updates.append("error_message = ?")
-                values.append(update.error_message)
-            if update.completed_at is not None:
-                updates.append("completed_at = ?")
-                values.append(update.completed_at)
-
-            if updates:
-                values.append(update.session_id)
-                self.conn.execute(
-                    f"UPDATE export_sessions SET {', '.join(updates)} WHERE id = ?",
-                    values,
-                )
+            values.append(update.session_id)
+            self.conn.execute(
+                f"UPDATE export_sessions SET {', '.join(updates)} WHERE id = ?",
+                values,
+            )
 
     def mark_transaction_exported(
         self,
@@ -1157,8 +1177,8 @@ class DatabaseManager:
             tuple: (transactions, total_count)
 
         """
-        conditions = []
-        params = []
+        conditions: list[str] = []
+        params: list[object] = []
 
         if account_number:
             conditions.append("account_number = ?")
@@ -1231,8 +1251,8 @@ class DatabaseManager:
         translated_description: str | None = None,
     ) -> Transaction | None:
         """Update transaction fields."""
-        updates = []
-        params = []
+        updates: list[str] = []
+        params: list[str | int] = []
 
         if category is not None:
             updates.append("category = ?")
@@ -1310,23 +1330,25 @@ class DatabaseManager:
         # Check if any of these transactions have been exported
         placeholders = ",".join(["?" for _ in transaction_ids])
         if target_name:
-            count = self.conn.execute(
+            row = self.conn.execute(
                 f"""
                 SELECT COUNT(*) FROM exported_transactions
                 WHERE transaction_id IN ({placeholders}) AND target_name = ?
             """,
                 [*transaction_ids, target_name],
-            ).fetchone()[0]
+            ).fetchone()
+            count = row[0] if row else 0
         else:
-            count = self.conn.execute(
+            row = self.conn.execute(
                 f"""
                 SELECT COUNT(*) FROM exported_transactions
                 WHERE transaction_id IN ({placeholders})
             """,
                 transaction_ids,
-            ).fetchone()[0]
+            ).fetchone()
+            count = row[0] if row else 0
 
-        return count > 0
+        return bool(count > 0)
 
     def has_source_file_been_imported(self, source_file: str) -> bool:
         """Check if a source file has been imported (has completed import session)."""
@@ -1340,6 +1362,6 @@ class DatabaseManager:
         return row[0] > 0 if row else False
 
     @property
-    def engine(self):
+    def engine(self) -> duckdb.DuckDBPyConnection:
         """Compatibility property for code that accesses .engine."""
         return self.conn

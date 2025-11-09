@@ -34,14 +34,14 @@ CONFIG_FILE_PARAM = typer.Option(
 )
 
 VERBOSE_PARAM = typer.Option(
-    False,
+    False,  # noqa: FBT003
     "--verbose",
     "-v",
     help="**Verbose console output**",
 )
 
 DRY_RUN_PARAM = typer.Option(
-    False,
+    False,  # noqa: FBT003
     "--dry-run",
     "-d",
     help="**Dry run mode - disable file operations**",
@@ -70,7 +70,7 @@ def get_available_accounts() -> list[str]:
 
 def _validate_account(
     ctx: typer.Context,
-    param: typer.CallbackParam,
+    _param: typer.CallbackParam,
     value: str | None,
 ) -> str | None:
     """Validate account parameter and provide suggestions if invalid."""
@@ -112,8 +112,8 @@ def _validate_account(
 
 
 def _autocomplete_accounts(
-    ctx: typer.Context,
-    args: list[str],
+    _ctx: typer.Context,
+    _args: list[str],
     incomplete: str,
 ) -> list[str]:
     """Autocomplete function for account names."""
@@ -132,7 +132,7 @@ ACCOUNT_PARAM = typer.Option(
 
 TARGET_PARAM = typer.Option(None, "--target", "-t", help="Target name for export")
 
-FORCE_PARAM = typer.Option(False, "--force", "-f", help="Overwrite existing files")
+FORCE_PARAM = typer.Option(False, "--force", "-f", help="Overwrite existing files")  # noqa: FBT003
 
 PATH_PARAM = typer.Option(
     "data/",
@@ -148,7 +148,7 @@ LIMIT_PARAM = typer.Option(
 )
 
 REPROCESS_EXISTING_PARAM = typer.Option(
-    False,
+    False,  # noqa: FBT003
     "--reprocess-existing",
     help="Reprocess files that have already been exported",
 )

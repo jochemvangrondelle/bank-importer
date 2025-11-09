@@ -12,6 +12,11 @@
 
 """Command-line interface for the bank importer."""
 
+# Initialize OpenTelemetry early for CLI
+from bank_importer.telemetry import initialize_telemetry
+
+initialize_telemetry()
+
 try:
     import typer
 except ImportError as e:

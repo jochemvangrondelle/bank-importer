@@ -1,0 +1,5 @@
+date,description,amount,balance
+2024-01-01,Filter Transaction 1,-1000.00,10000.00
+2024-01-05,Filter Transaction 2,2000.00,12000.00
+2024-01-10,Filter Transaction 3,-500.00,11500.00
+2024-01-15,Filter Transaction 4,3000.00,14500.00

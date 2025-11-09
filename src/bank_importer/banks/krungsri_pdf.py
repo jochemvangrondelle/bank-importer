@@ -27,7 +27,7 @@ import pytz
 try:
     import pypdfium2 as pdfium
 except ImportError:
-    pdfium = None  # type: ignore[assignment, misc]
+    pdfium = None
 
 from bank_importer.interfaces.parser import Parser, ReconciliationTotals
 from bank_importer.logging_config import log_error
