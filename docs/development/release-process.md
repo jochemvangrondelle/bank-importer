@@ -4,11 +4,10 @@ This project uses [python-semantic-release](https://python-semantic-release.read
 
 ## Branch Strategy
 
-The project follows a three-branch strategy:
+The project follows a two-branch strategy:
 
-- **`develop`**: Latest merged changes, continuous integration
-- **`beta`**: Pre-release versions, automatically updated from develop
-- **`stable`**: Production releases, updated from beta when a version is released
+- **`develop`**: Latest merged changes, continuous integration, publishes pre-release versions tagged as "latest"
+- **`main`**: Production releases, publishes stable versions tagged as "stable"
 
 ## Commit Convention
 
@@ -65,12 +64,12 @@ make dev-setup
 
 Releases are automatically triggered when:
 
-1. Commits are pushed to `develop`, `beta`, or `stable` branches
-2. Gitea Actions workflow runs semantic-release
+1. Commits are pushed to `develop` or `main` branches
+2. GitHub Actions workflow runs semantic-release
 3. Version is bumped based on commit messages
 4. Changelog is updated
-5. Gitea release is created
-6. Branches are automatically merged (develop → beta → stable)
+5. GitHub release is created
+6. Docker images are built and pushed with version tags
 
 ### Manual Release
 
@@ -94,9 +93,10 @@ uv run semantic-release publish
 
 ### Pre-release Versions
 
-- Beta versions are created on the `beta` branch
-- Stable versions are created on the `stable` branch
-- Pre-release versions use the `beta` tag
+- Pre-release versions are created on the `develop` branch
+- Stable versions are created on the `main` branch
+- Pre-release versions use the `prerelease` tag
+- Docker images are tagged with `latest` for develop branch and `stable` for main branch
 
 ## Docker Integration
 
@@ -119,8 +119,10 @@ make docker-build
 2. Make changes with conventional commits
 3. Run pre-commit hooks: `make pre-commit`
 4. Run tests: `make test`
-5. Create pull request to `develop`
-6. After merge, automatic release process begins
+5. Create pull request to `develop` or `main`
+6. After merge, automatic release process begins:
+   - `develop` → creates pre-release with `latest` Docker tag
+   - `main` → creates stable release with `stable` Docker tag
 
 ## Configuration
 
@@ -129,19 +131,22 @@ Semantic release configuration is in `pyproject.toml`:
 ```toml
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
-version_variable = "src/bank_importer/__init__.py:__version__"
 build_command = "uv build"
 dist_path = "dist"
 upload_to_vcs_release = true
 upload_to_pypi = false
 upload_to_release = true
-hvcs = "gitea"
-remote = "origin"
+hvcs = "github"
+remote = { name = "origin" }
 major_on_zero = false
-prerelease_tag = "beta"
+prerelease_tag = "prerelease"
 prerelease = true
-prerelease_token = "beta"
+prerelease_token = "prerelease"
 changelog_file = "CHANGELOG.md"
+
+[tool.semantic_release.branches]
+develop = { name = "develop", prerelease = true, prerelease_token = "prerelease", tags = ["latest"] }
+main = { name = "main", prerelease = false, tags = ["stable"] }
 ```
 
 ## Troubleshooting
@@ -160,11 +165,12 @@ git commit --amend -m "feat: your message here"
 
 ### Release Issues
 
-Check Gitea Actions logs for detailed error information. Common issues:
+Check GitHub Actions logs for detailed error information. Common issues:
 
 - Missing conventional commit format
-- Insufficient permissions
+- Insufficient permissions (GITHUB_TOKEN)
 - Version conflicts
+- Docker build failures
 
 ### Version Information
 
