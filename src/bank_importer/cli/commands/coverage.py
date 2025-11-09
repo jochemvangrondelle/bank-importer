@@ -114,8 +114,8 @@ def _display_busiest_days(date_counts: dict[str, int]) -> None:
         return
 
     log_info("  📈 Top 10 busiest days:")
-    for date, count in sorted_dates[:10]:
-        log_info(f"    {date}: {count} transactions")
+    for sorted_date, count in sorted_dates[:10]:
+        log_info(f"    {sorted_date}: {count} transactions")
 
     if len(sorted_dates) > MAX_QUIETEST_DAYS_DISPLAY:
         log_info("  📉 Quietest days:")

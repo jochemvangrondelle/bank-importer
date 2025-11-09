@@ -40,7 +40,7 @@ class TestTranslateCommand:
         mock_get_logger.return_value = mock_logger
         mock_config_manager = MagicMock()
         mock_config_manager.config = {
-            "translation": {"google_translate_api_key": "test_key"}
+            "translation": {"google_translate_api_key": "test_key"},
         }
         mock_config_manager_class.return_value = mock_config_manager
         mock_service = MagicMock()
@@ -51,7 +51,7 @@ class TestTranslateCommand:
             return_value="translated_text",
         ):
             with patch(
-                "bank_importer.cli.commands.translate.log_info"
+                "bank_importer.cli.commands.translate.log_info",
             ) as mock_log_info:
                 # Ensure clear_cache and stats are False explicitly
                 translate.translate(
@@ -99,7 +99,9 @@ class TestTranslateCommand:
 
         with patch("bank_importer.cli.commands.translate.log_info") as mock_log_info:
             translate.translate(
-                clear_cache=True, config_file="config.toml", verbose=False
+                clear_cache=True,
+                config_file="config.toml",
+                verbose=False,
             )
 
             mock_service.clear_cache.assert_called_once()
@@ -233,7 +235,7 @@ class TestTranslateCommand:
             side_effect=ImportError("Service not available"),
         ):
             with patch(
-                "bank_importer.cli.commands.translate.log_error"
+                "bank_importer.cli.commands.translate.log_error",
             ) as mock_log_error:
                 translate.translate(config_file="config.toml", verbose=False)
 

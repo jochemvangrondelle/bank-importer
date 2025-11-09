@@ -293,6 +293,7 @@ exclude        = ["__pycache__", ".git", ".venv", "venv", ".env", "packages"]
     [tool.ruff.lint]
     select = ["ALL"] # Enable all rules
     ignore = [
+        "COM812", # may cause conflicts when used with the formatter
         "E501", # line too long, handled by formatter
         "B008", # do not perform function calls in argument defaults (common pattern)
         "F601", # dictionary key literal repeated (duplicate keys in translation terms)
@@ -418,19 +419,15 @@ skip_gitignore    = true
 known_first_party = ["bank_importer"]
 
 [tool.coverage.run]
-source   = ["src"]
-omit     = ["*/tests/*", "*/test_*.py"]
-parallel = true
+source = ["src/bank_importer"]
+omit = ["*/tests/*", "*/test_*.py", "*/conftest.py"]
 
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
     "raise AssertionError",
     "raise NotImplementedError",
-    "if 0:",
     "if __name__ == .__main__.:",
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",

@@ -127,8 +127,33 @@ def clean(
     output_path = Path(output_dir)
     db_path = Path(database_url.replace("sqlite:///", ""))
 
+    # Debugging: log resolved values to help diagnose tests where nothing is found
+    logger.debug("config_manager.config=%s", getattr(config_manager, "config", None))
+    logger.debug("output_dir=%s", output_dir)
+    logger.debug("database_url=%s", database_url)
+    logger.debug("output_path=%s exists=%s", output_path, output_path.exists())
+    logger.debug("db_path=%s exists=%s", db_path, db_path.exists())
+    # Print to stdout so test output captures values even when logger is mocked
+
+    # Typer uses Option objects as default values when the CLI is invoked by Typer.
+    # When this function is called directly in tests the default argument values
+    # may still be Typer Option objects (truthy), causing incorrect branching.
+    # Normalize the flags to booleans or their underlying default values.
+    def _resolve_flag(flag) -> object:  # noqa: ANN001
+        try:
+            # Typer Option/Argument objects expose a 'default' attribute
+            return flag.default  # type: ignore[attr-defined]
+        except Exception:
+            return bool(flag)
+
+    db_only = _resolve_flag(db_only)
+    output_only = _resolve_flag(output_only)
+
     items_to_clean = _get_items_to_clean(
-        output_path, db_path, db_only=db_only, output_only=output_only
+        output_path,
+        db_path,
+        db_only=db_only,
+        output_only=output_only,
     )
 
     if not items_to_clean:

@@ -69,7 +69,7 @@ url = "sqlite:///{db_path_abs}"
             patch("bank_importer.cli.commands.clean.ConfigManager") as mock_cm_class,
             patch("bank_importer.cli.commands.clean._confirm_clean", return_value=True),
             patch(
-                "bank_importer.cli.commands.clean._clean_output_directory"
+                "bank_importer.cli.commands.clean._clean_output_directory",
             ) as mock_clean_output,
             patch("bank_importer.cli.commands.clean._clean_database") as mock_clean_db,
             patch("bank_importer.cli.commands.clean.log_success") as mock_log_success,
@@ -83,7 +83,7 @@ url = "sqlite:///{db_path_abs}"
             # Compare paths as strings since Path objects might differ
             called_path = str(call_args[0])
             assert called_path == str(output_path_abs) or called_path == str(
-                output_path
+                output_path,
             )
             mock_clean_db.assert_called_once()
             mock_log_success.assert_called()
@@ -127,7 +127,7 @@ url = "sqlite:///{db_path_abs}"
             patch("bank_importer.cli.commands.clean.ConfigManager") as mock_cm_class,
             patch("bank_importer.cli.commands.clean._confirm_clean", return_value=True),
             patch(
-                "bank_importer.cli.commands.clean._clean_output_directory"
+                "bank_importer.cli.commands.clean._clean_output_directory",
             ) as mock_clean_output,
             patch("bank_importer.cli.commands.clean._clean_database") as mock_clean_db,
         ):
@@ -143,7 +143,7 @@ url = "sqlite:///{db_path_abs}"
             call_args = mock_clean_output.call_args[0]
             called_path = str(call_args[0])
             assert called_path == str(output_path_abs) or called_path == str(
-                output_path
+                output_path,
             )
             mock_clean_db.assert_not_called()
 
@@ -186,13 +186,16 @@ url = "sqlite:///{db_path_abs}"
             patch("bank_importer.cli.commands.clean.ConfigManager") as mock_cm_class,
             patch("bank_importer.cli.commands.clean._confirm_clean", return_value=True),
             patch(
-                "bank_importer.cli.commands.clean._clean_output_directory"
+                "bank_importer.cli.commands.clean._clean_output_directory",
             ) as mock_clean_output,
             patch("bank_importer.cli.commands.clean._clean_database") as mock_clean_db,
         ):
             mock_cm_class.return_value = mock_config_manager
             clean.clean(
-                config_file=str(config_file), db_only=True, force=True, verbose=False
+                config_file=str(config_file),
+                db_only=True,
+                force=True,
+                verbose=False,
             )
 
             # mock_clean_db.assert_called_once()
@@ -202,7 +205,7 @@ url = "sqlite:///{db_path_abs}"
                 or call_args[0] == f"sqlite:///{db_path}"
             )
             assert str(call_args[1]) == str(db_path_abs) or str(call_args[1]) == str(
-                db_path
+                db_path,
             )
             mock_clean_output.assert_not_called()
 
@@ -225,7 +228,8 @@ url = "sqlite:///{db_path_abs}"
 
         with (
             patch(
-                "bank_importer.cli.commands.clean._get_items_to_clean", return_value=[]
+                "bank_importer.cli.commands.clean._get_items_to_clean",
+                return_value=[],
             ),
             patch("bank_importer.cli.commands.clean.log_warning") as mock_log_warning,
         ):
@@ -263,10 +267,11 @@ url = "sqlite:///{db_path_abs}"
                 return_value=[f"Output directory: {output_path}"],
             ),
             patch(
-                "bank_importer.cli.commands.clean._confirm_clean", return_value=False
+                "bank_importer.cli.commands.clean._confirm_clean",
+                return_value=False,
             ),
             patch(
-                "bank_importer.cli.commands.clean._clean_output_directory"
+                "bank_importer.cli.commands.clean._clean_output_directory",
             ) as mock_clean_output,
         ):
             clean.clean(config_file="config.toml", force=False, verbose=False)
@@ -292,7 +297,8 @@ url = "sqlite:///{db_path_abs}"
 
         with (
             patch(
-                "bank_importer.cli.commands.clean._get_items_to_clean", return_value=[]
+                "bank_importer.cli.commands.clean._get_items_to_clean",
+                return_value=[],
             ),
             patch("bank_importer.cli.commands.clean.log_warning"),
         ):
@@ -313,7 +319,10 @@ class TestCleanHelperFunctions:
         db_path = tmp_path / "test.db"
 
         items = clean._get_items_to_clean(
-            output_path, db_path, db_only=False, output_only=False
+            output_path,
+            db_path,
+            db_only=False,
+            output_only=False,
         )
 
         assert len(items) >= 1
@@ -326,7 +335,10 @@ class TestCleanHelperFunctions:
         db_path.touch()
 
         items = clean._get_items_to_clean(
-            output_path, db_path, db_only=False, output_only=False
+            output_path,
+            db_path,
+            db_only=False,
+            output_only=False,
         )
 
         assert len(items) >= 1
@@ -340,7 +352,10 @@ class TestCleanHelperFunctions:
         db_path.touch()
 
         items = clean._get_items_to_clean(
-            output_path, db_path, db_only=True, output_only=False
+            output_path,
+            db_path,
+            db_only=True,
+            output_only=False,
         )
 
         assert not any("Output directory" in item for item in items)
@@ -354,7 +369,10 @@ class TestCleanHelperFunctions:
         db_path.touch()
 
         items = clean._get_items_to_clean(
-            output_path, db_path, db_only=False, output_only=True
+            output_path,
+            db_path,
+            db_only=False,
+            output_only=True,
         )
 
         assert any("Output directory" in item for item in items)
@@ -413,10 +431,10 @@ class TestCleanHelperFunctions:
 
         with (
             patch(
-                "bank_importer.cli.commands.clean.DatabaseManager"
+                "bank_importer.cli.commands.clean.DatabaseManager",
             ) as mock_db_manager,
             patch("bank_importer.cli.commands.clean.log_success") as mock_log_success,
-            patch("bank_importer.cli.commands.clean.log_info") as mock_log_info,
+            patch("bank_importer.cli.commands.clean.log_info"),
         ):
             clean._clean_database(database_url, db_path)
 

@@ -262,7 +262,9 @@ class TestTelemetryHelperFunctions:
     def test_get_service_name_from_env(self) -> None:
         """Test _get_service_name from environment."""
         with patch.dict(
-            os.environ, {"OTEL_SERVICE_NAME": "custom-service"}, clear=True
+            os.environ,
+            {"OTEL_SERVICE_NAME": "custom-service"},
+            clear=True,
         ):
             import bank_importer.telemetry
 

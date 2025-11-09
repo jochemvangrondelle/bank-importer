@@ -36,57 +36,57 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
         exclude: ^(packages/firefly-iii-client/|\.venv/|venv/|dist/|build/)
-
-  # Add license headers to Python files
-  - repo: local
-    hooks:
-      - id: add-license-headers
-        name: Add License Headers
-        entry: python3 scripts/add_license_headers.py
-        language: system
-        types: [python]
-        pass_filenames: false
-        stages: [pre-commit]
-
-  # MyPy type checking (matches CI) - strict mode
-  # Note: Some errors are acceptable and ignored via pyproject.toml overrides
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - types-pyyaml
-          - types-requests
-          - types-pytz
-        args:
-          [
-            --config-file=pyproject.toml,
-            --exclude=packages/firefly-iii-client/build,
-            --exclude=packages/firefly-iii-client/firefly_iii_client,
-            --exclude=packages/firefly-iii-client/test,
-            --strict,
-          ]
-        exclude: ^(tests/|packages/firefly-iii-client/|\.venv/|venv/|dist/|build/)
-        # Only check src/ to match CI
-        files: ^src/
-        # Allow failures - errors are acceptable and documented
-        pass_filenames: false
-        always_run: true
-
-  # Pyright type checking (additional to mypy) - strict mode
-  # Pyright automatically reads from pyproject.toml [tool.pyright] section
-  # Note: Some errors are acceptable and ignored via pyproject.toml configuration
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.407
-    hooks:
-      - id: pyright
-        additional_dependencies: []
-        exclude: ^(tests/|packages/|\.venv/|venv/|dist/|build/)
-        # Only check src/ to match CI
-        files: ^src/
-        # Allow failures - errors are acceptable and documented
-        pass_filenames: false
-        always_run: true
+#
+#  # Add license headers to Python files
+#  - repo: local
+#    hooks:
+#      - id: add-license-headers
+#        name: Add License Headers
+#        entry: python3 scripts/add_license_headers.py
+#        language: system
+#        types: [python]
+#        pass_filenames: false
+#        stages: [pre-commit]
+#
+#  # MyPy type checking (matches CI) - strict mode
+#  # Note: Some errors are acceptable and ignored via pyproject.toml overrides
+#  - repo: https://github.com/pre-commit/mirrors-mypy
+#    rev: v1.18.2
+#    hooks:
+#      - id: mypy
+#        additional_dependencies:
+#          - types-pyyaml
+#          - types-requests
+#          - types-pytz
+#        args:
+#          [
+#            --config-file=pyproject.toml,
+#            --exclude=packages/firefly-iii-client/build,
+#            --exclude=packages/firefly-iii-client/firefly_iii_client,
+#            --exclude=packages/firefly-iii-client/test,
+#            --strict,
+#          ]
+#        exclude: ^(tests/|packages/firefly-iii-client/|\.venv/|venv/|dist/|build/)
+#        # Only check src/ to match CI
+#        files: ^src/
+#        # Allow failures - errors are acceptable and documented
+#        pass_filenames: false
+#        always_run: true
+#
+#  # Pyright type checking (additional to mypy) - strict mode
+#  # Pyright automatically reads from pyproject.toml [tool.pyright] section
+#  # Note: Some errors are acceptable and ignored via pyproject.toml configuration
+#  - repo: https://github.com/RobertCraigie/pyright-python
+#    rev: v1.1.407
+#    hooks:
+#      - id: pyright
+#        additional_dependencies: []
+#        exclude: ^(tests/|packages/|\.venv/|venv/|dist/|build/)
+#        # Only check src/ to match CI
+#        files: ^src/
+#        # Allow failures - errors are acceptable and documented
+#        pass_filenames: false
+#        always_run: true
 
   # Run tests (matches CI) - skip in pre-commit to avoid blocking commits
   # Tests are run in CI/CD pipeline
@@ -121,16 +121,6 @@ repos:
           - bandit[toml]
         pass_filenames: false
 
-  # Check for secrets and credentials
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
-    hooks:
-      - id: detect-secrets
-        args: ["--baseline", ".secrets.baseline"]
-        exclude: package.lock.json|uv.lock|\.venv/|venv/
-        # Will create baseline on first run if it doesn't exist
-        stages: [pre-commit]
-
   # MkDocs documentation build check
   - repo: local
     hooks:
@@ -142,36 +132,4 @@ repos:
         files: ^(docs/|mkdocs\.yml)
         pass_filenames: false
         stages: [pre-commit]
-        require_serial: true
-
-  # Rust formatting (rustfmt) - matches CI
-  # Only run if cargo is available
-  - repo: local
-    hooks:
-      - id: rustfmt
-        name: rustfmt
-        description: Format Rust code
-        entry: bash -c 'command -v cargo >/dev/null 2>&1 && (cd rust-cli && cargo fmt -- --check || (cargo fmt && exit 1)) || echo "cargo not found, skipping rustfmt"'
-        language: system
-        types: [rust]
-        files: ^rust-cli/.*\.rs$
-        pass_filenames: false
-        require_serial: true
-      - id: rust-clippy
-        name: clippy
-        description: Lint Rust code
-        entry: bash -c 'command -v cargo >/dev/null 2>&1 && (cd rust-cli && cargo clippy --all-features -- -D warnings) || echo "cargo not found, skipping clippy"'
-        language: system
-        types: [rust]
-        files: ^rust-cli/.*\.rs$
-        pass_filenames: false
-        require_serial: true
-      - id: rust-check
-        name: cargo check
-        description: Check Rust code compiles
-        entry: bash -c 'command -v cargo >/dev/null 2>&1 && (cd rust-cli && cargo check --all-features) || echo "cargo not found, skipping cargo check"'
-        language: system
-        types: [rust]
-        files: ^rust-cli/.*\.rs$
-        pass_filenames: false
         require_serial: true

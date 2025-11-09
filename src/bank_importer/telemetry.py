@@ -60,12 +60,12 @@ try:
                             {
                                 "name": span.name,
                                 "context": {
-                                    "trace_id": format(span.context.trace_id, "032x")
+                                    "trace_id": format(span.context.trace_id, "032x"),
                                 },
                                 "attributes": dict(span.attributes)
                                 if hasattr(span, "attributes")
                                 else {},
-                            }
+                            },
                         )
                         + "\n",
                     )

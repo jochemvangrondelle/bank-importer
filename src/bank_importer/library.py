@@ -318,7 +318,8 @@ def _process_transactions(
 
         if translate and config_manager:
             translation_service = _get_translation_service(
-                config_manager, account_config
+                config_manager,
+                account_config,
             )
 
         for transaction in transactions_list:

@@ -85,7 +85,9 @@ class TestAuthRouter:
         assert isinstance(data["password_configured"], bool)
 
     def test_login_with_default_password(
-        self, test_client: TestClient, tmp_path
+        self,
+        test_client: TestClient,
+        tmp_path,
     ) -> None:
         """Test login with default password when no password is configured."""
         from bank_importer.api import dependencies
@@ -160,7 +162,9 @@ password_hash = "{password_hash}"
             app.dependency_overrides.clear()
 
     def test_set_password_creates_api_section(
-        self, test_client: TestClient, tmp_path
+        self,
+        test_client: TestClient,
+        tmp_path,
     ) -> None:
         """Test that set_password creates api section if it doesn't exist."""
         from bank_importer.api import dependencies

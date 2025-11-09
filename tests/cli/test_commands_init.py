@@ -29,7 +29,7 @@ class TestInitCommand:
 
         with (
             patch(
-                "bank_importer.cli.commands.init.ConfigManager"
+                "bank_importer.cli.commands.init.ConfigManager",
             ) as mock_config_manager_class,
             patch("bank_importer.cli.commands.init.log_success") as mock_log_success,
             patch("bank_importer.cli.commands.init.log_warning") as mock_log_warning,
@@ -52,7 +52,7 @@ class TestInitCommand:
         with (
             patch("bank_importer.cli.commands.init.log_warning") as mock_log_warning,
             patch(
-                "bank_importer.cli.commands.init.ConfigManager"
+                "bank_importer.cli.commands.init.ConfigManager",
             ) as mock_config_manager_class,
         ):
             init.init(config_file=str(config_file), force=False)
@@ -70,10 +70,10 @@ class TestInitCommand:
 
         with (
             patch(
-                "bank_importer.cli.commands.init.ConfigManager"
+                "bank_importer.cli.commands.init.ConfigManager",
             ) as mock_config_manager_class,
             patch("bank_importer.cli.commands.init.log_success") as mock_log_success,
-            patch("bank_importer.cli.commands.init.log_warning") as mock_log_warning,
+            patch("bank_importer.cli.commands.init.log_warning"),
         ):
             mock_config_manager = MagicMock()
             mock_config_manager_class.return_value = mock_config_manager
@@ -91,7 +91,7 @@ class TestInitCommand:
 
         with (
             patch(
-                "bank_importer.cli.commands.init.ConfigManager"
+                "bank_importer.cli.commands.init.ConfigManager",
             ) as mock_config_manager_class,
             patch("bank_importer.cli.commands.init.log_success"),
             patch("bank_importer.cli.commands.init.log_warning"),

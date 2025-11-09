@@ -42,7 +42,9 @@ class TestListParsersCommand:
     @patch("bank_importer.cli.commands.list_parsers.get_console")
     @patch("bank_importer.cli.commands.list_parsers.ParserDetector")
     def test_list_parsers_creates_table(
-        self, mock_parser_detector_class, mock_console
+        self,
+        mock_parser_detector_class,
+        mock_console,
     ) -> None:
         """Test list-parsers creates a table."""
         mock_detector = MagicMock()
@@ -73,7 +75,9 @@ class TestListParsersCommand:
     @patch("bank_importer.cli.commands.list_parsers.get_console")
     @patch("bank_importer.cli.commands.list_parsers.ParserDetector")
     def test_list_parsers_shows_summary(
-        self, mock_parser_detector_class, mock_console
+        self,
+        mock_parser_detector_class,
+        mock_console,
     ) -> None:
         """Test list-parsers shows summary."""
         mock_detector = MagicMock()
@@ -96,7 +100,9 @@ class TestListParsersCommand:
     @patch("bank_importer.cli.commands.list_parsers.get_console")
     @patch("bank_importer.cli.commands.list_parsers.ParserDetector")
     def test_list_parsers_shows_usage_hints(
-        self, mock_parser_detector_class, mock_console
+        self,
+        mock_parser_detector_class,
+        mock_console,
     ) -> None:
         """Test list-parsers shows usage hints."""
         mock_detector = MagicMock()
@@ -113,13 +119,14 @@ class TestListParsersCommand:
     @patch("bank_importer.cli.commands.list_parsers.get_console")
     @patch("bank_importer.cli.commands.list_parsers.ParserDetector")
     def test_list_parsers_with_unknown_parser(
-        self, mock_parser_detector_class, mock_console
+        self,
+        mock_parser_detector_class,
+        mock_console,
     ) -> None:
         """Test list-parsers handles unknown parsers."""
         mock_detector = MagicMock()
         mock_detector.list_available_parsers.return_value = ["unknown_parser"]
         mock_parser_detector_class.return_value = mock_detector
-        mock_console_instance = mock_console.return_value
 
         with patch("bank_importer.cli.commands.list_parsers.Table") as mock_table_class:
             mock_table = MagicMock()

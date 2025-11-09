@@ -27,7 +27,10 @@ class TestVersionCommand:
     @patch("bank_importer.cli.commands.version.get_version_info")
     @patch("bank_importer.cli.commands.version.format_version")
     def test_version_basic(
-        self, mock_format_version, mock_get_version_info, mock_console
+        self,
+        mock_format_version,
+        mock_get_version_info,
+        mock_console,
     ) -> None:
         """Test version command with basic output."""
         mock_format_version.return_value = "0.1.0"
@@ -51,7 +54,10 @@ class TestVersionCommand:
     @patch("bank_importer.cli.commands.version.format_version")
     @patch.dict(os.environ, {"APP_VERSION": "1.2.3-docker"})
     def test_version_with_docker_version(
-        self, mock_format_version, mock_get_version_info, mock_console
+        self,
+        mock_format_version,
+        mock_get_version_info,
+        mock_console,
     ) -> None:
         """Test version command with Docker version."""
         mock_format_version.return_value = "0.1.0"
@@ -76,7 +82,10 @@ class TestVersionCommand:
     @patch("bank_importer.cli.commands.version.format_version")
     @patch.dict(os.environ, {"GIT_COMMIT": "abc123def456"})
     def test_version_with_git_commit(
-        self, mock_format_version, mock_get_version_info, mock_console
+        self,
+        mock_format_version,
+        mock_get_version_info,
+        mock_console,
     ) -> None:
         """Test version command with Git commit."""
         mock_format_version.return_value = "0.1.0"
@@ -100,7 +109,10 @@ class TestVersionCommand:
     @patch("bank_importer.cli.commands.version.format_version")
     @patch.dict(os.environ, {"GITHUB_SHA": "xyz789"})
     def test_version_with_github_sha(
-        self, mock_format_version, mock_get_version_info, mock_console
+        self,
+        mock_format_version,
+        mock_get_version_info,
+        mock_console,
     ) -> None:
         """Test version command with GitHub SHA."""
         mock_format_version.return_value = "0.1.0"
@@ -124,7 +136,10 @@ class TestVersionCommand:
     @patch("bank_importer.cli.commands.version.format_version")
     @patch.dict(os.environ, {"BUILD_DATE": "2025-01-15"})
     def test_version_with_build_date(
-        self, mock_format_version, mock_get_version_info, mock_console
+        self,
+        mock_format_version,
+        mock_get_version_info,
+        mock_console,
     ) -> None:
         """Test version command with build date."""
         mock_format_version.return_value = "0.1.0"
@@ -147,7 +162,10 @@ class TestVersionCommand:
     @patch("bank_importer.cli.commands.version.get_version_info")
     @patch("bank_importer.cli.commands.version.format_version")
     def test_version_with_all_info(
-        self, mock_format_version, mock_get_version_info, mock_console
+        self,
+        mock_format_version,
+        mock_get_version_info,
+        mock_console,
     ) -> None:
         """Test version command with all optional info."""
         mock_format_version.return_value = "0.1.0"
