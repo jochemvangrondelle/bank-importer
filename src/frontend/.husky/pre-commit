@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+cd frontend
+
+# Run type checking
+npm run type-check || exit 1
+
+# Run linting
+npm run lint || exit 1
+
+# Check formatting
+npm run format:check || exit 1
+
+# Check for duplicate code
+npm run check:duplicates || exit 1

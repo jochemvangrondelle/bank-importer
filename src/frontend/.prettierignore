@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+dist
+build
+
+# Generated files
+src/api/generated
+
+# Config files
+*.config.*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Logs
+*.log
+
+# IDE
+.vscode
+.idea
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.DS_Store
+*.tsbuildinfo

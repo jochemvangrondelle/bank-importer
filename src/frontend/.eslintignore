@@ -1,0 +1,29 @@
+# Dependencies
+node_modules
+dist
+build
+
+# Generated files
+src/api/generated
+
+# Config files
+*.config.*
+vite.config.ts
+playwright.config.ts
+
+# Build outputs
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# IDE
+.vscode
+.idea
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.DS_Store

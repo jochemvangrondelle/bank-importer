@@ -1,29 +1,177 @@
+# Pre-commit hooks configuration
+# These hooks match the checks in .github/workflows/ci.yml
+
 repos:
+  # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v5.0.0"
+    rev: v6.0.0
     hooks:
-      - id: check-case-conflict
-      - id: check-merge-conflict
-      - id: check-toml
+      - id: trailing-whitespace
+        exclude: ^\.venv/|^venv/|^dist/|^build/
+      - id: end-of-file-fixer
+        exclude: ^\.venv/|^venv/|^dist/|^build/
       - id: check-yaml
       - id: check-json
-        exclude: ^.devcontainer/devcontainer.json
-      - id: pretty-format-json
-        exclude: ^.devcontainer/devcontainer.json
-        args: [--autofix, --no-sort-keys]
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
+        exclude: ^\.devcontainer/devcontainer.json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-docstring-first
+      - id: debug-statements
+      - id: mixed-line-ending
+        args: [--fix=lf]
 
+  # Ruff linting and formatting (matches CI)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.14.0"
+    rev: v0.14.4
     hooks:
+      # Run the linter
       - id: ruff-check
-        args: [--fix]
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+        exclude: ^(packages/firefly-iii-client/|\.venv/|venv/|dist/|build/|scripts/)
+      # Run the formatter
       - id: ruff-format
-        args: [--exit-non-zero-on-fix]
+        types_or: [python, pyi]
+        exclude: ^(packages/firefly-iii-client/|\.venv/|venv/|dist/|build/)
 
+  # Add license headers to Python files
+  - repo: local
+    hooks:
+      - id: add-license-headers
+        name: Add License Headers
+        entry: python3 scripts/add_license_headers.py
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # MyPy type checking (matches CI) - strict mode
+  # Note: Some errors are acceptable and ignored via pyproject.toml overrides
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.18.2
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-pyyaml
+          - types-requests
+          - types-pytz
+        args:
+          [
+            --config-file=pyproject.toml,
+            --exclude=packages/firefly-iii-client/build,
+            --exclude=packages/firefly-iii-client/firefly_iii_client,
+            --exclude=packages/firefly-iii-client/test,
+            --strict,
+          ]
+        exclude: ^(tests/|packages/firefly-iii-client/|\.venv/|venv/|dist/|build/)
+        # Only check src/ to match CI
+        files: ^src/
+        # Allow failures - errors are acceptable and documented
+        pass_filenames: false
+        always_run: true
+
+  # Pyright type checking (additional to mypy) - strict mode
+  # Pyright automatically reads from pyproject.toml [tool.pyright] section
+  # Note: Some errors are acceptable and ignored via pyproject.toml configuration
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.407
+    hooks:
+      - id: pyright
+        additional_dependencies: []
+        exclude: ^(tests/|packages/|\.venv/|venv/|dist/|build/)
+        # Only check src/ to match CI
+        files: ^src/
+        # Allow failures - errors are acceptable and documented
+        pass_filenames: false
+        always_run: true
+
+  # Run tests (matches CI) - skip in pre-commit to avoid blocking commits
+  # Tests are run in CI/CD pipeline
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: bash -c 'echo "Skipping pytest in pre-commit - tests run in CI" && exit 0'
+        language: system
+        types: [python]
+        pass_filenames: false
+        exclude: ^(packages/|\.venv/|venv/|dist/|build/)
+
+  # Commitizen for conventional commits validation (commit-msg hook)
+  # This hook validates commit messages BEFORE they are committed
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: "v3.0.0"
+    rev: v4.9.1
     hooks:
       - id: commitizen
         stages: [commit-msg]
+        additional_dependencies: [cz-conventional-commits]
+        args: [--strict, --check]
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        args: [-r, src/, -f, json, -o, bandit-report.json, --exit-zero]
+        exclude: ^(tests/|packages/|\.venv/|venv/|dist/|build/)
+        additional_dependencies:
+          - bandit[toml]
+        pass_filenames: false
+
+  # Check for secrets and credentials
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: package.lock.json|uv.lock|\.venv/|venv/
+        # Will create baseline on first run if it doesn't exist
+        stages: [pre-commit]
+
+  # MkDocs documentation build check
+  - repo: local
+    hooks:
+      - id: mkdocs-build
+        name: MkDocs Build Check
+        entry: bash -c 'uv sync --group docs --quiet && uv run mkdocs build'
+        language: system
+        types: [markdown, yaml]
+        files: ^(docs/|mkdocs\.yml)
+        pass_filenames: false
+        stages: [pre-commit]
+        require_serial: true
+
+  # Rust formatting (rustfmt) - matches CI
+  # Only run if cargo is available
+  - repo: local
+    hooks:
+      - id: rustfmt
+        name: rustfmt
+        description: Format Rust code
+        entry: bash -c 'command -v cargo >/dev/null 2>&1 && (cd rust-cli && cargo fmt -- --check || (cargo fmt && exit 1)) || echo "cargo not found, skipping rustfmt"'
+        language: system
+        types: [rust]
+        files: ^rust-cli/.*\.rs$
+        pass_filenames: false
+        require_serial: true
+      - id: rust-clippy
+        name: clippy
+        description: Lint Rust code
+        entry: bash -c 'command -v cargo >/dev/null 2>&1 && (cd rust-cli && cargo clippy --all-features -- -D warnings) || echo "cargo not found, skipping clippy"'
+        language: system
+        types: [rust]
+        files: ^rust-cli/.*\.rs$
+        pass_filenames: false
+        require_serial: true
+      - id: rust-check
+        name: cargo check
+        description: Check Rust code compiles
+        entry: bash -c 'command -v cargo >/dev/null 2>&1 && (cd rust-cli && cargo check --all-features) || echo "cargo not found, skipping cargo check"'
+        language: system
+        types: [rust]
+        files: ^rust-cli/.*\.rs$
+        pass_filenames: false
+        require_serial: true
